@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>V1 Car Chassis Builder</title>
+    <style>
+body { margin:0; font-family:Arial; background:#111; color:#fff; }
+#toolbar { display:flex; justify-content:space-between; background:#222; padding:10px 20px; }
+.menu{position:relative;}
+.menu button{background:#444;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
+.dropdown{display:none;position:absolute;top:40px;left:0;background:#333;padding:10px;border-radius:6px}
+.menu.open .dropdown{display:block}
+.dropdown button{width:100%;margin:4px 0;background:#555}
+#main{display:flex;height:calc(100vh - 60px)}
+#leftSidebar,#rightSidebar{width:200px;background:#1b1b1b;padding:10px}
+#canvasContainer{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
+canvas{background:#1a1a1a;border:1px solid #333;cursor:crosshair}
+#modeLabel{font-size:12px;color:#aaa;margin-top:5px}
+.active{background:#00e5ff !important; color:#000 !important}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+    <div class="menu" id="toolsMenu">
+        <button onclick="toggleMenu('toolsMenu')">Tools ▼</button>
+        <div class="dropdown">
+            <button id="tubeBtn" onclick="activateTool('tube')">Tube Tool</button>
+            <button id="moveBtn" onclick="toggleMoveTool()">Move Tool (Toggle)</button>
+            <button id="joinBtn" onclick="activateTool('join')">Join Tool</button>
+            <button id="bendBtn" onclick="activateTool('bend')">Bend Tool</button>
+            <button id="cutBtn" onclick="activateTool('cut')">Cut Tool</button>
+            <button id="selectBtn" onclick="activateTool('select')">Select Tool</button>
+        </div>
+    </div>
+
+    <div class="menu" id="viewMenu">
+        <button onclick="toggleMenu('viewMenu')">View ▼</button>
+        <div class="dropdown">
+            <button onclick="setView('top')">Top View</button>
+            <button onclick="setView('bottom')">Bottom View</button>
+            <button onclick="setView('front')">Front View</button>
+            <button onclick="setView('back')">Back View</button>
+            <button onclick="setView('left')">Left Side View</button>
+            <button onclick="setView('right')">Right Side View</button>
+            <button onclick="setView('side')">Side View</button>
+        </div>
+    </div>
+
+    <div>
+        <button onclick="toggleMode()" id="modeBtn">Switch to 3D</button>
+    </div>
+
+    <div class="menu" id="settingsMenu">
+        <button onclick="toggleMenu('settingsMenu')">Settings ▼</button>
+        <div class="dropdown">
+            <button onclick="toggleSnap()">Toggle Snap</button>
+            <button onclick="undo()">Undo</button>
+            <button onclick="redo()">Redo</button>
+            <button onclick="saveDesign()">Save</button>
+            <button onclick="loadDesign()">Load</button>
+        </div>
+    </div>
+</div>
+
+<div id="main">
+
+    <div id="leftSidebar">
+        <h3>Materials</h3>
+        <button onclick="setMaterial('Steel')">Steel</button>
+        <button onclick="setMaterial('Aluminum')">Aluminum</button>
+        <button onclick="setMaterial('Carbon')">Carbon</button>
+        <p id="currentMaterial">Selected: Steel</p>
+    </div>
+
+    <div id="canvasContainer">
+        <canvas id="canvas" width="800" height="500"></canvas>
+        <div id="modeLabel">Mode: 2D (Top)</div>
+    </div>
+
+    <div id="rightSidebar">
+        <h3>Guide</h3>
+        <p>Move Tool: toggle ON → drag tubes</p>
+    </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let tubes = [];
+let groups = [];
+let bends = [];
+
+let history = [];
+let historyIndex = -1;
+
+let bendStart = null;
+
+let tool = "tube";
+let moveEnabled = false;
+let drawing = false;
+let moving = false;
+
+let selectedTube = null;
+let selectedTubes = [];
+let selectedGroup = null;
+
+let snap = true;
+let material = "Steel";
+let mode = "2D";
+let view = "top";
+
+const centerX = 400;
+const centerY = 250;
+
+let yaw=0, pitch=0, isRotating=false, lastX=0, lastY=0;
+const gridSize = 25;
+
+// ---------------- HISTORY ----------------
+function saveState(){
+  const snapshot = JSON.stringify({tubes, groups, bends});
+  history = history.slice(0, historyIndex + 1);
+  history.push(snapshot);
+  historyIndex++;
+}
+
+function loadState(state){
+  const data = JSON.parse(state);
+  tubes = data.tubes || [];
+  groups = data.groups || [];
+  bends = data.bends || [];
+}
+
+function undo(){
+  if(historyIndex <= 0) return;
+  historyIndex--;
+  loadState(history[historyIndex]);
+}
+
+function redo(){
+  if(historyIndex >= history.length - 1) return;
+  historyIndex++;
+  loadState(history[historyIndex]);
+}
+
+// ---------------- MENU ----------------
+function toggleMenu(id){
+  document.querySelectorAll('.menu').forEach(m=>{if(m.id!==id)m.classList.remove('open')});
+  document.getElementById(id).classList.toggle("open");
+}
+
+function activateTool(t){
+  tool = t;
+  moveEnabled = false;
+  selectedTubes = [];
+  selectedGroup = null;
+  bendStart = null;
+  updateToolUI();
+}
+
+function toggleMoveTool(){
+  moveEnabled = !moveEnabled;
+  tool = moveEnabled ? "move" : "tube";
+  selectedTubes = [];
+  selectedGroup = null;
+  updateToolUI();
+}
+
+function getClosestPointOnLine(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+
+  const len_sq = C*C + D*D;
+  const dot = A*C + B*D;
+  let t = len_sq !== 0 ? dot / len_sq : -1;
+
+  t = Math.max(0, Math.min(1, t)); // clamp
+
+  return {
+    x: x1 + t*C,
+    y: y1 + t*D,
+    t // position along line (0 → 1)
+  };
+}
+
+function updateToolUI(){
+  document.getElementById("tubeBtn").classList.toggle("active", tool==="tube" && !moveEnabled);
+  document.getElementById("moveBtn").classList.toggle("active", moveEnabled);
+  document.getElementById("joinBtn").classList.toggle("active", tool==="join");
+  document.getElementById("bendBtn").classList.toggle("active", tool==="bend");
+  document.getElementById("cutBtn").classList.toggle("active", tool==="cut");
+  document.getElementById("selectBtn").classList.toggle("active", tool==="select");
+  canvas.style.cursor = moveEnabled ? "grab" : "crosshair";
+}
+
+// ---------------- CORE ----------------
+function setView(v){view=v; updateLabel();}
+
+function toggleMode(){
+  mode = mode==="2D"?"3D":"2D";
+  modeBtn.textContent = mode==="2D"?"Switch to 3D":"Switch to 2D";
+  updateLabel();
+}
+
+function updateLabel(){
+  modeLabel.textContent = mode === "2D" ? `Mode: 2D (${view})` : "Mode: 3D";
+}
+
+function setMaterial(m){material=m; currentMaterial.textContent="Selected: "+m;}
+function toggleSnap(){snap=!snap;}
+
+function saveDesign(){
+  let name = prompt("Enter project name:");
+  if(!name) return;
+
+  const data = {
+    tubes,
+    groups,
+    bends,
+    settings: {
+      material,
+      view,
+      mode,
+      snap
+    },
+    timestamp: Date.now()
+  };
+
+  localStorage.setItem("design_" + name, JSON.stringify(data));
+  alert("Saved as: " + name);
+}
+
+function loadDesign(){
+  let keys = Object.keys(localStorage).filter(k => k.startsWith("design_"));
+
+  if(keys.length === 0){
+    alert("No saved designs found");
+    return;
+  }
+
+  let list = keys.map(k => k.replace("design_", "")).join("\n");
+  let name = prompt("Available designs:\n\n" + list + "\n\nEnter name to load:");
+
+  if(!name) return;
+
+  let data = localStorage.getItem("design_" + name);
+
+  if(!data){
+    alert("Design not found");
+    return;
+  }
+
+  try{
+    let d = JSON.parse(data);
+
+    tubes = d.tubes || [];
+    groups = d.groups || [];
+    bends = d.bends || [];
+
+    if(d.settings){
+      material = d.settings.material || material;
+      view = d.settings.view || view;
+      mode = d.settings.mode || mode;
+      snap = d.settings.snap ?? snap;
+    }
+
+    updateLabel();
+    updateToolUI();
+    saveState(); // keep undo system synced
+
+    alert("Loaded: " + name);
+
+  } catch(e){
+    alert("Failed to load design (corrupted data)");
+  }
+}
+
+// ---------------- GRID ----------------
+function snapToGrid(x,y){
+  if(!snap) return {x,y};
+  return {
+    x: Math.round((x-centerX)/gridSize)*gridSize + centerX,
+    y: Math.round((y-centerY)/gridSize)*gridSize + centerY
+  };
+}
+
+// ---------------- COORDS ----------------
+function getCoords(x,y){
+  let dx = x - centerX;
+  let dy = y - centerY;
+
+  switch(view){
+    case "top":    return {x:dx, y:dy, z:0};
+    case "bottom": return {x:dx, y:-dy, z:0};
+    case "side":   return {x:dx, y:0, z:dy};
+    case "front":  return {x:0, y:dy, z:dx};
+    case "back":   return {x:0, y:dy, z:-dx};
+    case "left":   return {x:-dx, y:dy, z:0};
+    case "right":  return {x:dx, y:dy, z:0};
+    default:       return {x:dx, y:dy, z:0};
+  }
+}
+
+function project(x,y,z){
+  if(mode==="2D"){
+    switch(view){
+      case "top":    return {x:centerX + x, y:centerY + y};
+      case "bottom": return {x:centerX + x, y:centerY - y};
+      case "side":   return {x:centerX + x, y:centerY + z};
+      case "front":  return {x:centerX + z, y:centerY + y};
+      case "back":   return {x:centerX - z, y:centerY + y};
+      case "left":   return {x:centerX - x, y:centerY + y};
+      case "right":  return {x:centerX + x, y:centerY + y};
+      default:       return {x:centerX + x, y:centerY + y};
+    }
+  }
+
+  // 3D mode remains the same
+  let rx = x*Math.cos(yaw) - z*Math.sin(yaw);
+  let rz = x*Math.sin(yaw) + z*Math.cos(yaw);
+  let ry = y*Math.cos(pitch) - rz*Math.sin(pitch);
+  return {x:centerX + rx, y:centerY + ry};
+}
+
+// ---------------- DETECT ----------------
+function distanceToLine(px, py, x1, y1, x2, y2) {
+  const A = px - x1;
+  const B = py - y1;
+  const C = x2 - x1;
+  const D = y2 - y1;
+
+  const dot = A * C + B * D;
+  const len_sq = C * C + D * D;
+  let param = len_sq !== 0 ? dot / len_sq : -1;
+
+  let xx, yy;
+
+  if (param < 0) { xx = x1; yy = y1; }
+  else if (param > 1) { xx = x2; yy = y2; }
+  else { xx = x1 + param * C; yy = y1 + param * D; }
+
+  const dx = px - xx;
+  const dy = py - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTubeAt(x,y){
+  return tubes.find(t=>{
+    let a = project(t.x1,t.y1,t.z1);
+    let b = project(t.x2,t.y2,t.z2);
+    return distanceToLine(x,y,a.x,a.y,b.x,b.y) < 10;
+  });
+}
+
+// ---------------- MOUSE ----------------
+canvas.addEventListener("mousedown",e=>{
+  let r=canvas.getBoundingClientRect();
+  let x=e.clientX-r.left, y=e.clientY-r.top;
+  ({x,y}=snapToGrid(x,y));
+
+  function deleteSelected(){
+  if(selectedTubes.length === 0) return;
+
+  tubes = tubes.filter(t => !selectedTubes.includes(t));
+
+  // also remove from groups
+  groups.forEach(g=>{
+    selectedTubes.forEach(t=>{
+      let i = g.indexOf(t);
+      if(i !== -1) g.splice(i,1);
+    });
+  });
+
+  selectedTubes = [];
+
+  saveState();
+}
+
+  // ✂️ CUT TOOL (IMPROVED)
+if(tool === "cut"){
+  let tube = getTubeAt(x,y);
+  if(!tube) return;
+
+  let a = project(tube.x1, tube.y1, tube.z1);
+  let b = project(tube.x2, tube.y2, tube.z2);
+
+  let cut = getClosestPointOnLine(x, y, a.x, a.y, b.x, b.y);
+
+  // ❌ prevent cutting too close to ends
+  if(cut.t < 0.05 || cut.t > 0.95){
+    return;
+  }
+
+  // interpolate back to 3D
+  let nx = tube.x1 + (tube.x2 - tube.x1) * cut.t;
+  let ny = tube.y1 + (tube.y2 - tube.y1) * cut.t;
+  let nz = tube.z1 + (tube.z2 - tube.z1) * cut.t;
+
+  // optional snap
+  if(snap){
+    let snapped = snapToGrid(
+      centerX + nx,
+      centerY + ny
+    );
+    let p = getCoords(snapped.x, snapped.y);
+    nx = p.x;
+    ny = p.y;
+    nz = p.z;
+  }
+
+  // remove original
+  tubes = tubes.filter(t => t !== tube);
+
+  // create two new tubes
+  let t1 = {
+    x1: tube.x1, y1: tube.y1, z1: tube.z1,
+    x2: nx, y2: ny, z2: nz,
+    material: tube.material
+  };
+
+  let t2 = {
+    x1: nx, y1: ny, z1: nz,
+    x2: tube.x2, y2: tube.y2, z2: tube.z2,
+    material: tube.material
+  };
+
+  tubes.push(t1, t2);
+
+  // 🔗 update groups safely
+  groups.forEach(g=>{
+    let index = g.indexOf(tube);
+    if(index !== -1){
+      g.splice(index, 1);
+      g.push(t1, t2);
+    }
+  });
+
+  saveState();
+  return;
+}
+
+  if(mode==="3D"){
+    isRotating=true; lastX=e.clientX; lastY=e.clientY; return;
+  }
+
+  if(tool === "select"){
+  let tube = getTubeAt(x,y);
+  if(!tube) return;
+
+  // toggle selection
+  if(selectedTubes.includes(tube)){
+    selectedTubes = selectedTubes.filter(t => t !== tube);
+  } else {
+    selectedTubes.push(tube);
+  }
+  return;
+}
+
+  if(tool === "join"){
+    let tube = getTubeAt(x,y);
+    if(tube){
+      if(selectedTubes.includes(tube)){
+        selectedTubes = selectedTubes.filter(t => t !== tube);
+      } else {
+        selectedTubes.push(tube);
+      }
+    }
+    return;
+  }
+
+  if(moveEnabled){
+    selectedTube = getTubeAt(x,y);
+    selectedGroup = groups.find(g => g.includes(selectedTube));
+
+    if(selectedGroup || selectedTube){
+      moving = true;
+      lastX = x;
+      lastY = y;
+      canvas.style.cursor = "grabbing";
+    }
+    return;
+  }
+
+
+
+  if(tool==="tube"){
+    let p = getCoords(x,y);
+    drawing=true;
+    tubes.push({x1:p.x,y1:p.y,z1:p.z,x2:p.x,y2:p.y,z2:p.z,material});
+  }
+
+  if(tool === "bend"){
+    let p = getCoords(x,y);
+
+    if(!bendStart){
+      bendStart = p;
+    } else {
+      bends.push({
+        x1: bendStart.x,
+        y1: bendStart.y,
+        z1: bendStart.z,
+        x2: p.x,
+        y2: p.y,
+        z2: p.z,
+        curve: 0.5
+      });
+      bendStart = null;
+      saveState();
+    }
+    return;
+  }
+
+});
+
+
+
+canvas.addEventListener("mousemove",e=>{
+  let r=canvas.getBoundingClientRect();
+  let x=e.clientX-r.left, y=e.clientY-r.top;
+  ({x,y}=snapToGrid(x,y));
+
+  if(drawing){
+    let p = getCoords(x,y);
+    let t = tubes[tubes.length-1];
+    t.x2=p.x; t.y2=p.y; t.z2=p.z;
+  }
+
+  if(moving){
+    let dx = x - lastX;
+    let dy = y - lastY;
+
+    let moveTube = (t)=>{
+      if(view==="top"){ t.x1+=dx; t.y1+=dy; t.x2+=dx; t.y2+=dy; }
+      if(view==="side"){ t.x1+=dx; t.z1+=dy; t.x2+=dx; t.z2+=dy; }
+      if(view==="front"){ t.z1+=dx; t.y1+=dy; t.z2+=dx; t.y2+=dy; }
+      if(view==="back"){ t.z1-=dx; t.y1+=dy; t.z2-=dx; t.y2+=dy; }
+    };
+
+    if(selectedGroup){
+      selectedGroup.forEach(moveTube);
+    } else if(selectedTube){
+      moveTube(selectedTube);
+    }
+
+    lastX = x;
+    lastY = y;
+  }
+
+  if(isRotating && mode==="3D"){
+    yaw += (e.clientX-lastX)*0.01;
+    pitch += (e.clientY-lastY)*0.01;
+    lastX=e.clientX; lastY=e.clientY;
+  }
+});
+
+canvas.addEventListener("mouseup",()=>{
+  if(drawing || moving){
+    saveState();
+  }
+
+  drawing=false;
+  moving=false;
+  selectedTube=null;
+  selectedGroup=null;
+  isRotating=false;
+  canvas.style.cursor = moveEnabled ? "grab" : "crosshair";
+});
+
+// ---------------- KEYBOARD ----------------
+document.addEventListener("keydown", e => {
+
+  if(tool === "join" && e.key === "Enter"){
+    if(selectedTubes.length < 2) return;
+    groups.push([...selectedTubes]);
+    selectedTubes = [];
+    saveState();
+  }
+
+  if(e.ctrlKey && e.key === "z"){
+    e.preventDefault();
+    undo();
+  }
+
+  if(e.ctrlKey && e.key === "y"){
+    e.preventDefault();
+    redo();
+  }
+
+
+});
+
+// ---------------- DRAW ----------------
+function drawGrid(){
+  ctx.strokeStyle="#222";
+  for(let x=centerX%gridSize;x<800;x+=gridSize){
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
+  }
+  for(let y=centerY%gridSize;y<500;y+=gridSize){
+    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke();
+  }
+
+  ctx.strokeStyle="red";
+  ctx.lineWidth=2;
+
+  ctx.beginPath(); ctx.moveTo(centerX,0); ctx.lineTo(centerX,500); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,centerY); ctx.lineTo(800,centerY); ctx.stroke();
+
+  ctx.lineWidth=1;
+}
+
+function draw(){
+  ctx.clearRect(0,0,800,500);
+  drawGrid();
+
+  tubes.forEach(t=>{
+    let a=project(t.x1,t.y1,t.z1);
+    let b=project(t.x2,t.y2,t.z2);
+
+    let isSelected = selectedTubes.includes(t);
+    let isGrouped = groups.some(g => g.includes(t));
+
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+
+    ctx.lineWidth = isSelected ? 8 : 6;
+    ctx.strokeStyle = isSelected ? "#00ff00" : (isGrouped ? "#ffaa00" : "#aaa");
+
+    ctx.lineCap="round";
+    ctx.stroke();
+  });
+
+  bends.forEach(b=>{
+    let a = project(b.x1,b.y1,b.z1);
+    let c = project((b.x1+b.x2)/2, b.y1+50, (b.z1+b.z2)/2);
+    let d = project(b.x2,b.y2,b.z2);
+
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.quadraticCurveTo(c.x,c.y,d.x,d.y);
+
+    ctx.strokeStyle = "#00e5ff";
+    ctx.lineWidth = 6;
+    ctx.stroke();
+  });
+
+  requestAnimationFrame(draw);
+}
+
+// ---------------- INIT ----------------
+updateToolUI();
+saveState();
+draw();
+</script>
+
+</body>
+</html>
