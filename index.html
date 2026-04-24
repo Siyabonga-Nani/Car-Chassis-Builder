@@ -2,659 +2,1802 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>V1 Car Chassis Builder</title>
+    <title>Car Builder</title>
+
     <style>
-body { margin:0; font-family:Arial; background:#111; color:#fff; }
-#toolbar { display:flex; justify-content:space-between; background:#222; padding:10px 20px; }
-.menu{position:relative;}
-.menu button{background:#444;color:#fff;border:none;padding:8px 12px;border-radius:6px;cursor:pointer}
-.dropdown{display:none;position:absolute;top:40px;left:0;background:#333;padding:10px;border-radius:6px}
-.menu.open .dropdown{display:block}
-.dropdown button{width:100%;margin:4px 0;background:#555}
-#main{display:flex;height:calc(100vh - 60px)}
-#leftSidebar,#rightSidebar{width:200px;background:#1b1b1b;padding:10px}
-#canvasContainer{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center}
-canvas{background:#1a1a1a;border:1px solid #333;cursor:crosshair}
-#modeLabel{font-size:12px;color:#aaa;margin-top:5px}
-.active{background:#00e5ff !important; color:#000 !important}
+body{
+    margin:0;
+    overflow:hidden;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background:#0f172a;
+    color:#f8fafc;
+}
+
+/* TOP BAR */
+#topbar{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    height:50px;
+    background: rgba(31, 41, 55, 0.8);
+    backdrop-filter: blur(8px);
+    display:flex;
+    align-items:center;
+    padding:0 20px;
+    gap:15px;
+    z-index:100;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* SIDE BARS */
+.sidebar{
+    position:absolute;
+    top:50px;
+    bottom:0;
+    width:220px;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(12px);
+    padding:15px;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index:90;
+    overflow-y:auto;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+#leftbar{ 
+    left:0;
+    transform: translateX(-190px);
+}
+#rightbar{ 
+    right:0;
+    transform: translateX(190px);
+}
+
+#leftbar:hover, #rightbar:hover{ 
+    transform: translateX(0);
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+    margin-bottom: 8px;
+    padding-left: 4px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+button, select {
+    background: rgba(51, 65, 85, 0.5);
+    border: 1px solid rgba(255,255,255,0.05);
+    color: #e2e8f0;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+button:hover {
+    background: rgba(51, 65, 85, 0.8);
+    border-color: rgba(255,255,255,0.1);
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+button.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #60a5fa;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.material-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.material-btn {
+    padding: 6px;
+    text-align: center;
+    font-size: 10px;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.swatch {
+    width: 12px;
+    height: 4px;
+    border-radius: 2px;
+    display: block;
+}
+
+canvas{
+    position:absolute;
+    top:50px;
+    left:0;
+}
+
+b {
+    margin-top:10px;
+    display:block;
+    color:#9ca3af;
+}
 </style>
 </head>
+
 <body>
 
-<div id="toolbar">
-    <div class="menu" id="toolsMenu">
-        <button onclick="toggleMenu('toolsMenu')">Tools ▼</button>
-        <div class="dropdown">
-            <button id="tubeBtn" onclick="activateTool('tube')">Tube Tool</button>
-            <button id="moveBtn" onclick="toggleMoveTool()">Move Tool (Toggle)</button>
-            <button id="joinBtn" onclick="activateTool('join')">Join Tool</button>
-            <button id="bendBtn" onclick="activateTool('bend')">Bend Tool</button>
-            <button id="cutBtn" onclick="activateTool('cut')">Cut Tool</button>
-            <button id="selectBtn" onclick="activateTool('select')">Select Tool</button>
+<div id="topbar" style="justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <label>View:</label>
+        <select onchange="view=this.value" style="width: auto;">
+            <option value="top">Top</option>
+            <option value="bottom">Bottom</option>
+            <option value="front">Front</option>
+            <option value="back">Back</option>
+            <option value="left">Left</option>
+            <option value="right">Right</option>
+        </select>
+        <button onclick="mode3D=!mode3D" style="width: auto;">2D / 3D</button>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <button onclick="saveProject()" style="width: auto;">💾 Save Project</button>
+        <button onclick="document.getElementById('fileInput').click()" style="width: auto;">📂 Load Project</button>
+        <input type="file" id="fileInput" style="display:none" onchange="loadProject(event)" accept=".json">
+        <button onclick="openSettings()" style="width: auto;">⚙️ Settings</button>
+    </div>
+</div>
+
+<div id="leftbar" class="sidebar">
+    <div class="section">
+        <div class="section-title"><span>🛠️</span> Editor</div>
+        <div class="btn-group">
+            <button onclick="setTool('select', this)">Select</button>
+            <button onclick="setTool('rotate', this)">Rotate</button>
+            <button onclick="setTool('draw', this)">Draw Tube</button>
+            <button onclick="setTool('move', this)">Move Tube</button>
+            <button onclick="setTool('point', this)">Point Edit</button>
+            <button onclick="setTool('join', this)">Join Nodes</button>
+            <button onclick="setTool('cut', this)">Cut Tube</button>
+            <button onclick="setTool('delete', this)">Delete</button>
         </div>
     </div>
 
-    <div class="menu" id="viewMenu">
-        <button onclick="toggleMenu('viewMenu')">View ▼</button>
-        <div class="dropdown">
-            <button onclick="setView('top')">Top View</button>
-            <button onclick="setView('bottom')">Bottom View</button>
-            <button onclick="setView('front')">Front View</button>
-            <button onclick="setView('back')">Back View</button>
-            <button onclick="setView('left')">Left Side View</button>
-            <button onclick="setView('right')">Right Side View</button>
-            <button onclick="setView('side')">Side View</button>
+    <div class="section">
+        <div class="section-title"><span>🏗️</span> Chassis</div>
+        <div class="btn-group">
+            <button onclick="setTool('mount', this)">Add Mount Point</button>
+            <div class="material-selector">
+                <button class="material-btn" onclick="setMaterial('steel', this)">
+                    <span class="swatch" style="background:#94a3b8"></span> Steel
+                </button>
+                <button class="material-btn" onclick="setMaterial('aluminum', this)">
+                    <span class="swatch" style="background:#38bdf8"></span> Alum
+                </button>
+                <button class="material-btn" onclick="setMaterial('carbon', this)">
+                    <span class="swatch" style="background:#6366f1"></span> Carbon
+                </button>
+            </div>
         </div>
     </div>
 
-    <div>
-        <button onclick="toggleMode()" id="modeBtn">Switch to 3D</button>
+    <div class="section">
+        <div class="section-title"><span>⛓️</span> Suspension</div>
+        <div class="btn-group">
+            <button onclick="setTool('suspension', this)">Add Suspension</button>
+            <button onclick="setTool('hub', this)">Add Hub</button>
+            <button onclick="setTool('aarm', this)">Add A-Arm</button>
+        </div>
     </div>
 
-    <div class="menu" id="settingsMenu">
-        <button onclick="toggleMenu('settingsMenu')">Settings ▼</button>
-        <div class="dropdown">
-            <button onclick="toggleSnap()">Toggle Snap</button>
-            <button onclick="undo()">Undo</button>
-            <button onclick="redo()">Redo</button>
-            <button onclick="saveDesign()">Save</button>
-            <button onclick="loadDesign()">Load</button>
+    <div class="section">
+        <div class="section-title"><span>⚙️</span> Drivetrain</div>
+        <div class="btn-group">
+            <button onclick="setTool('axle', this)">Add Axle</button>
+            <button onclick="setTool('engine', this)">Add Engine</button>
+            <button onclick="setTool('gearbox', this)">Add Gearbox</button>
+            <button onclick="setTool('diff', this)">Add Differential</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>🛞</span> Wheels & Brakes</div>
+        <div class="btn-group">
+            <button onclick="setTool('wheel', this)">Add Wheel</button>
+            <button onclick="setTool('rotor', this)">Add Rotor</button>
+            <button onclick="setTool('pad', this)">Add Pad</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>🪟</span> Body & Interior</div>
+        <div class="btn-group">
+            <button onclick="setTool('panel', this)">Add Panel</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>📊</span> Analysis</div>
+        <div class="btn-group">
+            <button onclick="calculateMaterials()">Calculate Build</button>
         </div>
     </div>
 </div>
 
-<div id="main">
-
-    <div id="leftSidebar">
-        <h3>Materials</h3>
-        <button onclick="setMaterial('Steel')">Steel</button>
-        <button onclick="setMaterial('Aluminum')">Aluminum</button>
-        <button onclick="setMaterial('Carbon')">Carbon</button>
-        <p id="currentMaterial">Selected: Steel</p>
-    </div>
-
-    <div id="canvasContainer">
-        <canvas id="canvas" width="800" height="500"></canvas>
-        <div id="modeLabel">Mode: 2D (Top)</div>
-    </div>
-
-    <div id="rightSidebar">
-        <h3>Guide</h3>
-        <p>Move Tool: toggle ON → drag tubes</p>
-    </div>
-
+<div id="rightbar" class="sidebar">
+    <b>Inspector</b>
+    <div id="info">Select Node/Tube</div>
 </div>
+
+<canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("c");
+const ctx=canvas.getContext("2d");
 
-let tubes = [];
-let groups = [];
-let bends = [];
+let W=window.innerWidth;
+let H=window.innerHeight-50;
 
-let history = [];
-let historyIndex = -1;
+canvas.width=W;
+canvas.height=H;
 
-let bendStart = null;
+let gridSize=25;
+let offsetX=W/2;
+let offsetY=H/2;
 
-let tool = "tube";
-let moveEnabled = false;
-let drawing = false;
-let moving = false;
+let tool="draw";
+let view="top";
+let mode3D=false;
 
-let selectedTube = null;
-let selectedTubes = [];
-let selectedGroup = null;
+let nodes=[];
+let tubes=[];
 
-let snap = true;
-let material = "Steel";
-let mode = "2D";
-let view = "top";
+let selectedTube=null;
+let selectedNode=null;
 
-const centerX = 400;
-const centerY = 250;
+let drawing=false;
+let startNode=null;
 
-let yaw=0, pitch=0, isRotating=false, lastX=0, lastY=0;
-const gridSize = 25;
+let dragging=false;
+let lastMouse=null;
 
-// ---------------- HISTORY ----------------
-function saveState(){
-  const snapshot = JSON.stringify({tubes, groups, bends});
-  history = history.slice(0, historyIndex + 1);
-  history.push(snapshot);
-  historyIndex++;
+let joinBuffer=[];
+
+let panning=false;
+
+// NEW SYSTEMS
+let wheels = [];
+let suspensions = [];
+let currentMaterial = "steel";
+
+let mounts = [];
+let selectedMount = null;
+
+let camYaw = 0;
+let camPitch = 0;
+let isRotating = false;
+
+let axles = [];
+let hubs = [];
+let rotors = [];
+let pads = [];
+
+let engines = [];
+let gearboxes = [];
+let differentials = [];
+let aArms = [];
+
+let selectedComponent = null;
+let aArmBuffer = [];
+let suspensionBuffer = [];
+let panels = [];
+let panelBuffer = [];
+
+function setTool(name, btn) {
+    tool = name;
+    aArmBuffer = []; 
+    suspensionBuffer = []; 
+    panelBuffer = []; // Clear buffer when switching tools
+    // Highlight active button
+    document.querySelectorAll('#leftbar button').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
 }
 
-function loadState(state){
-  const data = JSON.parse(state);
-  tubes = data.tubes || [];
-  groups = data.groups || [];
-  bends = data.bends || [];
+function setMaterial(type, btn) {
+    currentMaterial = type;
+    // Highlight active material button
+    document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
 }
 
-function undo(){
-  if(historyIndex <= 0) return;
-  historyIndex--;
-  loadState(history[historyIndex]);
-}
+function updateInspector(){
+    const info = document.getElementById("info");
+    if(!selectedComponent){
+        info.innerHTML = "Select Node/Tube or Component";
+        return;
+    }
+    
+    let html = `<div style="padding:5px; background:#1e293b; border-radius:4px; margin-top:5px;">`;
+    html += `<b style="color:#60a5fa">${selectedComponent.type.toUpperCase()}</b>`;
+    
+    let obj = selectedComponent.data;
+    if(!obj.rot) obj.rot = {x:0, y:0, z:0};
 
-function redo(){
-  if(historyIndex >= history.length - 1) return;
-  historyIndex++;
-  loadState(history[historyIndex]);
-}
+    // Generic Rotation Controls for ALL vehicle parts
+    html += `
+        <div style="margin-top:10px; border-top:1px solid #374151; pt:5px">
+            <label style="font-size:11px; color:#9ca3af">Rotation (Yaw / Pitch / Roll)</label>
+            <div>
+                <label style="font-size:10px">Yaw (Y): ${Math.round(obj.rot.y)}°</label>
+                <input type="range" min="-180" max="180" value="${obj.rot.y}" 
+                    style="width:100%"
+                    oninput="selectedComponent.data.rot.y=parseFloat(this.value); updateInspector()">
+            </div>
+            <div>
+                <label style="font-size:10px">Pitch (X): ${Math.round(obj.rot.x)}°</label>
+                <input type="range" min="-180" max="180" value="${obj.rot.x}" 
+                    style="width:100%"
+                    oninput="selectedComponent.data.rot.x=parseFloat(this.value); updateInspector()">
+            </div>
+            <div>
+                <label style="font-size:10px">Roll (Z): ${Math.round(obj.rot.z)}°</label>
+                <input type="range" min="-180" max="180" value="${obj.rot.z}" 
+                    style="width:100%"
+                    oninput="selectedComponent.data.rot.z=parseFloat(this.value); updateInspector()">
+            </div>
+        </div>
+    `;
 
-// ---------------- MENU ----------------
-function toggleMenu(id){
-  document.querySelectorAll('.menu').forEach(m=>{if(m.id!==id)m.classList.remove('open')});
-  document.getElementById(id).classList.toggle("open");
-}
-
-function activateTool(t){
-  tool = t;
-  moveEnabled = false;
-  selectedTubes = [];
-  selectedGroup = null;
-  bendStart = null;
-  updateToolUI();
-}
-
-function toggleMoveTool(){
-  moveEnabled = !moveEnabled;
-  tool = moveEnabled ? "move" : "tube";
-  selectedTubes = [];
-  selectedGroup = null;
-  updateToolUI();
-}
-
-function getClosestPointOnLine(px, py, x1, y1, x2, y2) {
-  const A = px - x1;
-  const B = py - y1;
-  const C = x2 - x1;
-  const D = y2 - y1;
-
-  const len_sq = C*C + D*D;
-  const dot = A*C + B*D;
-  let t = len_sq !== 0 ? dot / len_sq : -1;
-
-  t = Math.max(0, Math.min(1, t)); // clamp
-
-  return {
-    x: x1 + t*C,
-    y: y1 + t*D,
-    t // position along line (0 → 1)
-  };
-}
-
-function updateToolUI(){
-  document.getElementById("tubeBtn").classList.toggle("active", tool==="tube" && !moveEnabled);
-  document.getElementById("moveBtn").classList.toggle("active", moveEnabled);
-  document.getElementById("joinBtn").classList.toggle("active", tool==="join");
-  document.getElementById("bendBtn").classList.toggle("active", tool==="bend");
-  document.getElementById("cutBtn").classList.toggle("active", tool==="cut");
-  document.getElementById("selectBtn").classList.toggle("active", tool==="select");
-  canvas.style.cursor = moveEnabled ? "grab" : "crosshair";
-}
-
-// ---------------- CORE ----------------
-function setView(v){view=v; updateLabel();}
-
-function toggleMode(){
-  mode = mode==="2D"?"3D":"2D";
-  modeBtn.textContent = mode==="2D"?"Switch to 3D":"Switch to 2D";
-  updateLabel();
-}
-
-function updateLabel(){
-  modeLabel.textContent = mode === "2D" ? `Mode: 2D (${view})` : "Mode: 3D";
-}
-
-function setMaterial(m){material=m; currentMaterial.textContent="Selected: "+m;}
-function toggleSnap(){snap=!snap;}
-
-function saveDesign(){
-  let name = prompt("Enter project name:");
-  if(!name) return;
-
-  const data = {
-    tubes,
-    groups,
-    bends,
-    settings: {
-      material,
-      view,
-      mode,
-      snap
-    },
-    timestamp: Date.now()
-  };
-
-  localStorage.setItem("design_" + name, JSON.stringify(data));
-  alert("Saved as: " + name);
-}
-
-function loadDesign(){
-  let keys = Object.keys(localStorage).filter(k => k.startsWith("design_"));
-
-  if(keys.length === 0){
-    alert("No saved designs found");
-    return;
-  }
-
-  let list = keys.map(k => k.replace("design_", "")).join("\n");
-  let name = prompt("Available designs:\n\n" + list + "\n\nEnter name to load:");
-
-  if(!name) return;
-
-  let data = localStorage.getItem("design_" + name);
-
-  if(!data){
-    alert("Design not found");
-    return;
-  }
-
-  try{
-    let d = JSON.parse(data);
-
-    tubes = d.tubes || [];
-    groups = d.groups || [];
-    bends = d.bends || [];
-
-    if(d.settings){
-      material = d.settings.material || material;
-      view = d.settings.view || view;
-      mode = d.settings.mode || mode;
-      snap = d.settings.snap ?? snap;
+    if(selectedComponent.type === "suspension"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Suspension Tuning</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Spring Width: ${obj.springWidth}</label>
+                    <input type="range" min="4" max="30" value="${obj.springWidth}" 
+                        style="width:100%"
+                        oninput="selectedComponent.data.springWidth=parseInt(this.value); updateInspector()">
+                </div>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Coils: ${obj.coils}</label>
+                    <input type="range" min="5" max="30" value="${obj.coils}" 
+                        style="width:100%"
+                        oninput="selectedComponent.data.coils=parseInt(this.value); updateInspector()">
+                </div>
+            </div>
+        `;
     }
 
-    updateLabel();
-    updateToolUI();
-    saveState(); // keep undo system synced
-
-    alert("Loaded: " + name);
-
-  } catch(e){
-    alert("Failed to load design (corrupted data)");
-  }
-}
-
-// ---------------- GRID ----------------
-function snapToGrid(x,y){
-  if(!snap) return {x,y};
-  return {
-    x: Math.round((x-centerX)/gridSize)*gridSize + centerX,
-    y: Math.round((y-centerY)/gridSize)*gridSize + centerY
-  };
-}
-
-// ---------------- COORDS ----------------
-function getCoords(x,y){
-  let dx = x - centerX;
-  let dy = y - centerY;
-
-  switch(view){
-    case "top":    return {x:dx, y:dy, z:0};
-    case "bottom": return {x:dx, y:-dy, z:0};
-    case "side":   return {x:dx, y:0, z:dy};
-    case "front":  return {x:0, y:dy, z:dx};
-    case "back":   return {x:0, y:dy, z:-dx};
-    case "left":   return {x:-dx, y:dy, z:0};
-    case "right":  return {x:dx, y:dy, z:0};
-    default:       return {x:dx, y:dy, z:0};
-  }
-}
-
-function project(x,y,z){
-  if(mode==="2D"){
-    switch(view){
-      case "top":    return {x:centerX + x, y:centerY + y};
-      case "bottom": return {x:centerX + x, y:centerY - y};
-      case "side":   return {x:centerX + x, y:centerY + z};
-      case "front":  return {x:centerX + z, y:centerY + y};
-      case "back":   return {x:centerX - z, y:centerY + y};
-      case "left":   return {x:centerX - x, y:centerY + y};
-      case "right":  return {x:centerX + x, y:centerY + y};
-      default:       return {x:centerX + x, y:centerY + y};
+    if(selectedComponent.type === "engine"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Engine Configuration</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Type</label>
+                    <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                        onchange="selectedComponent.data.config=this.value; updateInspector()">
+                        <option value="inline" ${obj.config==='inline'?'selected':''}>Inline</option>
+                        <option value="v" ${obj.config==='v'?'selected':''}>V-Engine</option>
+                        <option value="w" ${obj.config==='w'?'selected':''}>W-Engine</option>
+                        <option value="boxer" ${obj.config==='boxer'?'selected':''}>Boxer</option>
+                        <option value="rotary" ${obj.config==='rotary'?'selected':''}>Rotary</option>
+                    </select>
+                </div>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Cylinders: ${obj.cylinders}</label>
+                    <input type="range" min="2" max="16" step="2" value="${obj.cylinders}" 
+                        style="width:100%"
+                        oninput="selectedComponent.data.cylinders=parseInt(this.value); updateInspector()">
+                </div>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Induction</label>
+                    <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                        onchange="selectedComponent.data.forcedInduction=this.value; updateInspector()">
+                        <option value="none" ${obj.forcedInduction==='none'?'selected':''}>Naturally Aspirated</option>
+                        <option value="turbo" ${obj.forcedInduction==='turbo'?'selected':''}>Turbocharger</option>
+                        <option value="super" ${obj.forcedInduction==='super'?'selected':''}>Supercharger</option>
+                    </select>
+                </div>
+            </div>
+        `;
     }
-  }
 
-  // 3D mode remains the same
-  let rx = x*Math.cos(yaw) - z*Math.sin(yaw);
-  let rz = x*Math.sin(yaw) + z*Math.cos(yaw);
-  let ry = y*Math.cos(pitch) - rz*Math.sin(pitch);
-  return {x:centerX + rx, y:centerY + ry};
+    if(selectedComponent.type === "gearbox"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Transmission Setup</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Type</label>
+                    <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                        onchange="selectedComponent.data.type=this.value; updateInspector()">
+                        <option value="manual" ${obj.type==='manual'?'selected':''}>Manual</option>
+                        <option value="automatic" ${obj.type==='automatic'?'selected':''}>Automatic</option>
+                        <option value="dsg" ${obj.type==='dsg'?'selected':''}>DSG (Dual-Clutch)</option>
+                        <option value="sequential" ${obj.type==='sequential'?'selected':''}>Sequential (Rally)</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "panel"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Panel Styling</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Color</label>
+                    <input type="color" value="${obj.color || '#3b82f6'}" 
+                        style="width:100%"
+                        onchange="selectedComponent.data.color=this.value; updateInspector()">
+                </div>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Opacity: ${Math.round((obj.opacity || 0.5) * 100)}%</label>
+                    <input type="range" min="10" max="100" value="${Math.round((obj.opacity || 0.5) * 100)}" 
+                        style="width:100%"
+                        oninput="selectedComponent.data.opacity=parseInt(this.value)/100; updateInspector()">
+                </div>
+            </div>
+        `;
+    }
+    
+    html += `</div>`;
+    info.innerHTML = html;
 }
 
-// ---------------- DETECT ----------------
-function distanceToLine(px, py, x1, y1, x2, y2) {
-  const A = px - x1;
-  const B = py - y1;
-  const C = x2 - x1;
-  const D = y2 - y1;
+function snap(v){ return Math.round(v/gridSize)*gridSize; }
 
-  const dot = A * C + B * D;
-  const len_sq = C * C + D * D;
-  let param = len_sq !== 0 ? dot / len_sq : -1;
-
-  let xx, yy;
-
-  if (param < 0) { xx = x1; yy = y1; }
-  else if (param > 1) { xx = x2; yy = y2; }
-  else { xx = x1 + param * C; yy = y1 + param * D; }
-
-  const dx = px - xx;
-  const dy = py - yy;
-  return Math.sqrt(dx * dx + dy * dy);
+function createNode(x,y,z){
+    let n={x,y,z};
+    nodes.push(n);
+    return n;
 }
 
-function getTubeAt(x,y){
-  return tubes.find(t=>{
-    let a = project(t.x1,t.y1,t.z1);
-    let b = project(t.x2,t.y2,t.z2);
-    return distanceToLine(x,y,a.x,a.y,b.x,b.y) < 10;
-  });
+function findNearbyNode(p){
+    for(let n of nodes){
+        if(Math.abs(n.x-p.x)<gridSize &&
+           Math.abs(n.y-p.y)<gridSize &&
+           Math.abs(n.z-p.z)<gridSize){
+            return n;
+        }
+    }
+    return null;
 }
 
-// ---------------- MOUSE ----------------
-canvas.addEventListener("mousedown",e=>{
-  let r=canvas.getBoundingClientRect();
-  let x=e.clientX-r.left, y=e.clientY-r.top;
-  ({x,y}=snapToGrid(x,y));
+function project(p){
+    if(!mode3D){
+        if(view==="top") return {x:offsetX+p.x, y:offsetY+p.z};
+        if(view==="bottom") return {x:offsetX+p.x, y:offsetY-p.z};
+        if(view==="front") return {x:offsetX+p.x, y:offsetY-p.y};
+        if(view==="back") return {x:offsetX-p.x, y:offsetY-p.y};
+        if(view==="left") return {x:offsetX-p.z, y:offsetY-p.y};
+        if(view==="right") return {x:offsetX+p.z, y:offsetY-p.y};
+    }
 
-  function deleteSelected(){
-  if(selectedTubes.length === 0) return;
+    // 3D projection
+    let x = p.x;
+    let y = p.y;
+    let z = p.z;
 
-  tubes = tubes.filter(t => !selectedTubes.includes(t));
+    // rotate Y (yaw)
+    let cosY = Math.cos(camYaw);
+    let sinY = Math.sin(camYaw);
 
-  // also remove from groups
-  groups.forEach(g=>{
-    selectedTubes.forEach(t=>{
-      let i = g.indexOf(t);
-      if(i !== -1) g.splice(i,1);
+    let dx = cosY * x - sinY * z;
+    let dz = sinY * x + cosY * z;
+
+    // rotate X (pitch)
+    let cosX = Math.cos(camPitch);
+    let sinX = Math.sin(camPitch);
+
+    let dy = cosX * y - sinX * dz;
+    dz = sinX * y + cosX * dz;
+
+    // perspective
+    let scale = 400 / (400 + dz);
+
+    return {
+        x: offsetX + dx * scale,
+        y: offsetY - dy * scale
+    };
+}
+
+function toWorld(m){
+    let x=m.x-offsetX;
+    let y=m.y-offsetY;
+
+    if(view==="top") return {x:snap(x),y:0,z:snap(y)};
+    if(view==="bottom") return {x:snap(x),y:0,z:snap(-y)};
+    if(view==="front") return {x:snap(x),y:snap(-y),z:0};
+    if(view==="back") return {x:snap(-x),y:snap(-y),z:0};
+    if(view==="left") return {x:0,y:snap(-y),z:snap(-x)};
+    if(view==="right") return {x:0,y:snap(-y),z:snap(x)};
+}
+
+function drawGrid(){
+    ctx.strokeStyle="#1e293b";
+
+    for(let x=-2000;x<2000;x+=gridSize){
+        let p1=project({x:x,y:0,z:-2000});
+        let p2=project({x:x,y:0,z:2000});
+        ctx.beginPath();
+        ctx.moveTo(p1.x,p1.y);
+        ctx.lineTo(p2.x,p2.y);
+        ctx.stroke();
+    }
+
+    for(let z=-2000;z<2000;z+=gridSize){
+        let p1=project({x:-2000,y:0,z:z});
+        let p2=project({x:2000,y:0,z:z});
+        ctx.beginPath();
+        ctx.moveTo(p1.x,p1.y);
+        ctx.lineTo(p2.x,p2.y);
+        ctx.stroke();
+    }
+}
+
+function getCompTransform(comp, type){
+    let basePos = {x:0, y:0, z:0};
+    let rot = {x:0, y:0, z:0};
+    
+    function addRot(a, b){
+        return {x: a.x + (b.x||0), y: a.y + (b.y||0), z: a.z + (b.z||0)};
+    }
+    
+    // Default rot if missing
+    if(!comp.rot) comp.rot = {x:0, y:0, z:0};
+    // Support legacy camber mapping
+    if(comp.camber !== undefined) rot.z += comp.camber;
+
+    if(type === "mount") return {pos: comp, rot: {x:0,y:0,z:0}};
+    
+    if(type === "suspension"){
+        basePos = {...comp.mount};
+        rot = addRot(rot, comp.rot);
+        return {pos: basePos, rot: rot};
+    }
+    
+    if(type === "hub"){
+        if(comp.suspension){
+            let parent = getCompTransform(comp.suspension, "suspension");
+            basePos = {...parent.pos};
+            basePos.y -= comp.suspension.springLevel; // Ride height
+            rot = addRot(parent.rot, comp.rot);
+        } else {
+            basePos = {...comp.mount};
+            rot = addRot(rot, comp.rot);
+        }
+        return {pos: basePos, rot: rot};
+    }
+    
+    if(type === "rotor"){
+        let parent = getCompTransform(comp.hub, "hub");
+        return {pos: parent.pos, rot: addRot(parent.rot, comp.rot||{x:0,y:0,z:0})};
+    }
+    
+    if(type === "pad"){
+        let parent = getCompTransform(comp.rotor, "rotor");
+        return {pos: parent.pos, rot: addRot(parent.rot, comp.rot||{x:0,y:0,z:0})};
+    }
+    
+    if(type === "wheel"){
+        if(comp.rotor){
+            let parent = getCompTransform(comp.rotor, "rotor");
+            return {pos: parent.pos, rot: addRot(parent.rot, comp.rot||{x:0,y:0,z:0})};
+        }
+        basePos = comp.mount;
+        rot = addRot(rot, comp.rot||{x:0,y:0,z:0});
+        return {pos: basePos, rot: rot};
+    }
+    
+    if(type === "engine" || type === "gearbox" || type === "diff"){
+        basePos = comp.mount || {x:0,y:0,z:0};
+        rot = addRot(rot, comp.rot||{x:0,y:0,z:0});
+        return {pos: basePos, rot: rot};
+    }
+    
+    return {pos: basePos, rot: rot};
+}
+
+function projectTransformed(worldPos, centerPos, rotDeg){
+    let dx = worldPos.x - centerPos.x;
+    let dy = worldPos.y - centerPos.y;
+    let dz = worldPos.z - centerPos.z;
+    
+    // Euler angles to radians
+    let rx = rotDeg.x * Math.PI / 180;
+    let ry = rotDeg.y * Math.PI / 180;
+    let rz = rotDeg.z * Math.PI / 180;
+    
+    // 1. Rotate Y (Yaw)
+    let sY = Math.sin(ry), cY = Math.cos(ry);
+    let x1 = dx * cY + dz * sY;
+    let z1 = -dx * sY + dz * cY;
+    
+    // 2. Rotate X (Pitch)
+    let sX = Math.sin(rx), cX = Math.cos(rx);
+    let y2 = dy * cX - z1 * sX;
+    let z2 = dy * sX + z1 * cX;
+    
+    // 3. Rotate Z (Roll)
+    let sZ = Math.sin(rz), cZ = Math.cos(rz);
+    let x3 = x1 * cZ - y2 * sZ;
+    let y3 = x1 * sZ + y2 * cZ;
+    
+    return project({
+        x: centerPos.x + x3,
+        y: centerPos.y + y3,
+        z: centerPos.z + z2
     });
-  });
-
-  selectedTubes = [];
-
-  saveState();
 }
 
-  // ✂️ CUT TOOL (IMPROVED)
-if(tool === "cut"){
-  let tube = getTubeAt(x,y);
-  if(!tube) return;
+function render(){
+    ctx.clearRect(0,0,W,H);
 
-  let a = project(tube.x1, tube.y1, tube.z1);
-  let b = project(tube.x2, tube.y2, tube.z2);
+    drawGrid();
 
-  let cut = getClosestPointOnLine(x, y, a.x, a.y, b.x, b.y);
+    // DRAW PANELS
+    panels.forEach(p => {
+        if(p.points.length < 3) return;
+        ctx.fillStyle = p.color || "#3b82f6";
+        ctx.globalAlpha = p.opacity !== undefined ? p.opacity : 0.5;
+        
+        ctx.beginPath();
+        p.points.forEach((pt, i) => {
+            let proj = project(pt);
+            if(i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+        });
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+        
+        // Outline
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === p) ? "#facc15" : "#64748b";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
 
-  // ❌ prevent cutting too close to ends
-  if(cut.t < 0.05 || cut.t > 0.95){
-    return;
-  }
-
-  // interpolate back to 3D
-  let nx = tube.x1 + (tube.x2 - tube.x1) * cut.t;
-  let ny = tube.y1 + (tube.y2 - tube.y1) * cut.t;
-  let nz = tube.z1 + (tube.z2 - tube.z1) * cut.t;
-
-  // optional snap
-  if(snap){
-    let snapped = snapToGrid(
-      centerX + nx,
-      centerY + ny
-    );
-    let p = getCoords(snapped.x, snapped.y);
-    nx = p.x;
-    ny = p.y;
-    nz = p.z;
-  }
-
-  // remove original
-  tubes = tubes.filter(t => t !== tube);
-
-  // create two new tubes
-  let t1 = {
-    x1: tube.x1, y1: tube.y1, z1: tube.z1,
-    x2: nx, y2: ny, z2: nz,
-    material: tube.material
-  };
-
-  let t2 = {
-    x1: nx, y1: ny, z1: nz,
-    x2: tube.x2, y2: tube.y2, z2: tube.z2,
-    material: tube.material
-  };
-
-  tubes.push(t1, t2);
-
-  // 🔗 update groups safely
-  groups.forEach(g=>{
-    let index = g.indexOf(tube);
-    if(index !== -1){
-      g.splice(index, 1);
-      g.push(t1, t2);
+    // DRAW PANEL BUFFER
+    if(tool === "panel" && panelBuffer.length > 0){
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        panelBuffer.forEach((pt, i) => {
+            let proj = project(pt);
+            if(i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Highlight first point to show where to close
+        if(panelBuffer.length >= 3){
+            let p0 = project(panelBuffer[0]);
+            ctx.fillStyle = "#22c55e";
+            ctx.beginPath(); ctx.arc(p0.x, p0.y, 6, 0, Math.PI*2); ctx.fill();
+        }
     }
-  });
 
-  saveState();
-  return;
-}
 
-  if(mode==="3D"){
-    isRotating=true; lastX=e.clientX; lastY=e.clientY; return;
-  }
+    // draw tubes
+    tubes.forEach(t=>{
+        let a=project(t.a);
+        let b=project(t.b);
 
-  if(tool === "select"){
-  let tube = getTubeAt(x,y);
-  if(!tube) return;
+        let color = "#60a5fa"; // default
+        if(t.material === "steel") color = "#94a3b8";
+        if(t.material === "aluminum") color = "#38bdf8";
+        if(t.material === "carbon") color = "#6366f1";
 
-  // toggle selection
-  if(selectedTubes.includes(tube)){
-    selectedTubes = selectedTubes.filter(t => t !== tube);
-  } else {
-    selectedTubes.push(tube);
-  }
-  return;
-}
+        ctx.strokeStyle=(t===selectedTube)?"#22c55e":color;
+        ctx.lineWidth=t.thickness || 6;
 
-  if(tool === "join"){
-    let tube = getTubeAt(x,y);
-    if(tube){
-      if(selectedTubes.includes(tube)){
-        selectedTubes = selectedTubes.filter(t => t !== tube);
-      } else {
-        selectedTubes.push(tube);
-      }
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+    });
+
+    function drawHub(pos, rot, data){
+        let p = project(pos);
+        ctx.fillStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#334155";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 6, 0, Math.PI*2);
+        ctx.fill();
+        if(selectedComponent && selectedComponent.data === data){
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 10, 0, Math.PI*2);
+            ctx.stroke();
+        }
     }
-    return;
-  }
 
-  if(moveEnabled){
-    selectedTube = getTubeAt(x,y);
-    selectedGroup = groups.find(g => g.includes(selectedTube));
-
-    if(selectedGroup || selectedTube){
-      moving = true;
-      lastX = x;
-      lastY = y;
-      canvas.style.cursor = "grabbing";
+    function drawRotor(pos, rot, data){
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#94a3b8";
+        ctx.lineWidth = 3;
+        function drawRotorDisk(radius){
+            ctx.beginPath();
+            let steps = 16;
+            for(let i=0; i<=steps; i++){
+                let angle = (i / steps) * Math.PI * 2;
+                let pt = { x: pos.x, y: pos.y + Math.cos(angle)*radius, z: pos.z + Math.sin(angle)*radius };
+                let p = projectTransformed(pt, pos, rot);
+                if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            }
+            ctx.stroke();
+        }
+        drawRotorDisk(12);
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 1;
+        drawRotorDisk(10);
     }
-    return;
-  }
 
-
-
-  if(tool==="tube"){
-    let p = getCoords(x,y);
-    drawing=true;
-    tubes.push({x1:p.x,y1:p.y,z1:p.z,x2:p.x,y2:p.y,z2:p.z,material});
-  }
-
-  if(tool === "bend"){
-    let p = getCoords(x,y);
-
-    if(!bendStart){
-      bendStart = p;
-    } else {
-      bends.push({
-        x1: bendStart.x,
-        y1: bendStart.y,
-        z1: bendStart.z,
-        x2: p.x,
-        y2: p.y,
-        z2: p.z,
-        curve: 0.5
-      });
-      bendStart = null;
-      saveState();
+    function drawPad(pos, rot, data){
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#ef4444";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        let steps = 8;
+        for(let i=0; i<=steps; i++){
+            let angle = (i / steps) * 1.0 - 0.5;
+            let pt = { x: pos.x, y: pos.y + Math.cos(angle)*12, z: pos.z + Math.sin(angle)*12 };
+            let p = projectTransformed(pt, pos, rot);
+            if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
     }
-    return;
-  }
 
+    function drawWheel(pos, rot, radius, data){
+        let pCenter = project(pos);
+        let isProfileView = (view === "top" || view === "bottom" || view === "front" || view === "back");
+        
+        if(!mode3D && isProfileView && Math.abs(rot.y%180) < 1 && Math.abs(rot.x%180) < 1){
+            let tireWidth = 15;
+            let r = radius + 5;
+            let p1, p2, p3, p4;
+            if(view === "top" || view === "bottom"){
+                p1 = project({x: pos.x - tireWidth/2, y: pos.y, z: pos.z - r});
+                p2 = project({x: pos.x + tireWidth/2, y: pos.y, z: pos.z - r});
+                p3 = project({x: pos.x + tireWidth/2, y: pos.y, z: pos.z + r});
+                p4 = project({x: pos.x - tireWidth/2, y: pos.y, z: pos.z + r});
+            } else {
+                p1 = project({x: pos.x - tireWidth/2, y: pos.y - r, z: pos.z});
+                p2 = project({x: pos.x + tireWidth/2, y: pos.y - r, z: pos.z});
+                p3 = project({x: pos.x + tireWidth/2, y: pos.y + r, z: pos.z});
+                p4 = project({x: pos.x - tireWidth/2, y: pos.y + r, z: pos.z});
+            }
+            ctx.fillStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#020617";
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            return;
+        }
+
+        function drawDisk(radius, color, thickness, fill=false){
+            if(fill) ctx.fillStyle = color; else ctx.strokeStyle = color;
+            ctx.lineWidth = thickness;
+            ctx.beginPath();
+            let steps = 24;
+            for(let i=0; i<=steps; i++){
+                let angle = (i / steps) * Math.PI * 2;
+                let pt = { x: pos.x, y: pos.y + Math.cos(angle) * radius, z: pos.z + Math.sin(angle) * radius };
+                let p = projectTransformed(pt, pos, rot);
+                if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            }
+            if(fill) ctx.fill(); else ctx.stroke();
+        }
+
+        if(selectedComponent && selectedComponent.data === data) drawDisk(radius + 8, "#facc15", 2);
+        drawDisk(radius + 6, "#020617", 10);
+        drawDisk(radius, "#cbd5e1", 4);
+        ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 2;
+        for(let i=0; i<5; i++){
+            let angle = (i / 5) * Math.PI * 2;
+            let pt = { x: pos.x, y: pos.y + Math.cos(angle) * radius, z: pos.z + Math.sin(angle) * radius };
+            let pEdge = projectTransformed(pt, pos, rot);
+            ctx.beginPath(); ctx.moveTo(pCenter.x, pCenter.y); ctx.lineTo(pEdge.x, pEdge.y); ctx.stroke();
+        }
+        ctx.fillStyle = "#64748b"; ctx.beginPath(); ctx.arc(pCenter.x, pCenter.y, 4, 0, Math.PI*2); ctx.fill();
+    }
+
+    axles.forEach(axle=>{
+        let c = axle.center;
+        let half = axle.width / 2;
+        let rot = axle.rot || {x:0, y:0, z:0};
+
+        let left = {x: c.x - half, y: c.y, z: c.z};
+        let right = {x: c.x + half, y: c.y, z: c.z};
+
+        // SUSPENSION MOUNT POINTS on Axle
+        let sML = {x: c.x - half*0.6, y: c.y, z: c.z};
+        let sMR = {x: c.x + half*0.6, y: c.y, z: c.z};
+        axle.mounts = [sML, sMR]; // Cache for snapping
+
+        let pL = project(left);
+        let pR = project(right);
+        let pC = project(c);
+        let pSML = project(sML);
+        let pSMR = project(sMR);
+
+        // draw axle bar
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === axle) ? "#facc15" : "#94a3b8";
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(pL.x, pL.y); ctx.lineTo(pR.x, pR.y); ctx.stroke();
+
+        // draw suspension mounts
+        ctx.fillStyle = "#10b981";
+        ctx.beginPath(); ctx.arc(pSML.x, pSML.y, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(pSMR.x, pSMR.y, 3, 0, Math.PI*2); ctx.fill();
+
+        // draw full wheel assembly at ends
+        [left, right].forEach(pos => {
+            drawHub(pos, rot, axle);
+            drawRotor(pos, rot, axle);
+            drawPad(pos, rot, axle);
+            drawWheel(pos, rot, 20, axle);
+        });
+    });
+
+    // draw nodes
+    nodes.forEach(n=>{
+        let p=project(n);
+        ctx.fillStyle=(n===selectedNode)?"#facc15":"#ef4444";
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,4,0,Math.PI*2);
+        ctx.fill();
+    });
+
+    // DRAW HUBS
+    hubs.forEach(h=>{
+        let transform = getCompTransform(h, "hub");
+        drawHub(transform.pos, transform.rot, h);
+    });
+
+    // DRAW ROTORS
+    rotors.forEach(r=>{
+        let transform = getCompTransform(r, "rotor");
+        drawRotor(transform.pos, transform.rot, r);
+    });
+
+    // DRAW PADS
+    pads.forEach(pd=>{
+        let transform = getCompTransform(pd, "pad");
+        drawPad(transform.pos, transform.rot, pd);
+    });
+
+    function drawEngine(pos, rot, config, cylinders, induction, data) {
+        let w=30, h=30, d=40; // Default dimensions
+        let color = "#475569";
+
+        if(config === "inline"){
+            w = 15; h = 25; d = 10 + cylinders * 10;
+        } else if(config === "v"){
+            w = 30; h = 22; d = 10 + cylinders * 6;
+        } else if(config === "boxer"){
+            w = 45; h = 12; d = 10 + cylinders * 6;
+        } else if(config === "rotary"){
+            w = 20; h = 20; d = 25;
+        } else if(config === "w"){
+            w = 40; h = 25; d = 10 + cylinders * 5;
+        }
+
+        // Draw main block
+        drawBox(pos, rot, w, h, d, color, data);
+
+        // Draw forced induction
+        if(induction === "turbo"){
+            let tPos = {x: pos.x + w/2 + 5, y: pos.y, z: pos.z};
+            drawBox(tPos, rot, 8, 8, 8, "#94a3b8", data);
+        } else if(induction === "super"){
+            let sPos = {x: pos.x, y: pos.y + h/2 + 5, z: pos.z};
+            drawBox(sPos, rot, w*0.8, 8, d*0.6, "#cbd5e1", data);
+        }
+
+        // V-engine visual flare: Add "cylinder banks"
+        if(config === "v"){
+            // Left bank
+            let lRot = {x: rot.x, y: rot.y, z: rot.z + 30};
+            drawBox(pos, lRot, w*0.6, h*0.8, d, color, data);
+            // Right bank
+            let rRot = {x: rot.x, y: rot.y, z: rot.z - 30};
+            drawBox(pos, rRot, w*0.6, h*0.8, d, color, data);
+        }
+    }
+
+    // DRAW ENGINE
+    engines.forEach(e => {
+        let transform = getCompTransform(e, "engine");
+        drawEngine(transform.pos, transform.rot, e.config, e.cylinders, e.forcedInduction, e);
+    });
+
+    function drawGearbox(pos, rot, type, data) {
+        let w=20, h=20, d=30;
+        let color = "#64748b";
+
+        if(type === "manual"){
+            w = 18; h = 18; d = 28;
+        } else if(type === "automatic"){
+            w = 24; h = 24; d = 35;
+            color = "#475569";
+        } else if(type === "dsg"){
+            w = 20; h = 20; d = 32;
+            color = "#334155";
+        } else if(type === "sequential"){
+            w = 15; h = 20; d = 38;
+            color = "#1e293b";
+        }
+
+        drawBox(pos, rot, w, h, d, color, data);
+
+        // Visual detail: Bell housing (simplified)
+        let bPos = {x: pos.x, y: pos.y, z: pos.z - d/2 - 2};
+        drawBox(bPos, rot, w+4, h+4, 4, "#94a3b8", data);
+    }
+
+    // DRAW GEARBOX
+    gearboxes.forEach(g => {
+        let transform = getCompTransform(g, "gearbox");
+        drawGearbox(transform.pos, transform.rot, g.type, g);
+    });
+
+    // DRAW DIFFERENTIAL
+    differentials.forEach(d => {
+        let transform = getCompTransform(d, "diff");
+        drawBox(transform.pos, transform.rot, 25, 25, 25, "#1e293b", d);
+    });
+
+    function drawBox(pos, rot, w, h, d, color, data) {
+        let p1 = {x: pos.x-w/2, y: pos.y-h/2, z: pos.z-d/2};
+        let p2 = {x: pos.x+w/2, y: pos.y-h/2, z: pos.z-d/2};
+        let p3 = {x: pos.x+w/2, y: pos.y+h/2, z: pos.z-d/2};
+        let p4 = {x: pos.x-w/2, y: pos.y+h/2, z: pos.z-d/2};
+        let p5 = {x: pos.x-w/2, y: pos.y-h/2, z: pos.z+d/2};
+        let p6 = {x: pos.x+w/2, y: pos.y-h/2, z: pos.z+d/2};
+        let p7 = {x: pos.x+w/2, y: pos.y+h/2, z: pos.z+d/2};
+        let p8 = {x: pos.x-w/2, y: pos.y+h/2, z: pos.z+d/2};
+
+        let pts = [p1,p2,p3,p4,p5,p6,p7,p8].map(p => projectTransformed(p, pos, rot));
+        
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#94a3b8";
+        ctx.lineWidth = 1;
+        ctx.fillStyle = color;
+
+        // Draw faces (simplified wireframe with fill)
+        const faces = [[0,1,2,3], [4,5,6,7], [0,1,5,4], [2,3,7,6], [0,4,7,3], [1,5,6,2]];
+        faces.forEach(f => {
+            ctx.beginPath();
+            ctx.moveTo(pts[f[0]].x, pts[f[0]].y);
+            f.forEach(i => ctx.lineTo(pts[i].x, pts[i].y));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        });
+    }
+
+    // DRAW WHEELS (Rim + Tire)
+    wheels.forEach(w=>{
+        let transform = getCompTransform(w, "wheel");
+        drawWheel(transform.pos, transform.rot, w.radius, w);
+    });
+
+// DRAW MOUNT POINTS
+mounts.forEach(m=>{
+    let p = project(m);
+
+    ctx.fillStyle = "#10b981";
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,5,0,Math.PI*2);
+    ctx.fill();
+});
+
+// DRAW A-ARMS
+aArms.forEach(a => {
+    let pHub = project(a.hub);
+    let p1 = project(a.p1);
+    let p2 = project(a.p2);
+    
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === a) ? "#facc15" : "#64748b";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(pHub.x, pHub.y);
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(pHub.x, pHub.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.stroke();
+
+    if(selectedComponent && selectedComponent.data === a){
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(pHub.x, pHub.y, 10, 0, Math.PI*2); ctx.stroke();
+    }
+});
+
+// DRAW SUSPENSION
+suspensions.forEach(s=>{
+    if(!s.p1 || !s.p2) return;
+    let p1 = s.p1;
+    let p2 = s.p2;
+    
+    let pTop = project(p1);
+    let pBottom = project(p2);
+
+    // Selection highlight
+    if(selectedComponent && selectedComponent.data === s){
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(pTop.x, pTop.y);
+        ctx.lineTo(pBottom.x, pBottom.y);
+        ctx.stroke();
+    }
+
+    // Main shaft (Dampener)
+    ctx.strokeStyle = "#4b5563";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(pTop.x, pTop.y);
+    ctx.lineTo(pBottom.x, pBottom.y);
+    ctx.stroke();
+
+    // SPRING rendering
+    ctx.strokeStyle = "#a78bfa";
+    ctx.lineWidth = 3;
+    let coils = s.coils || 10;
+    let width = s.springWidth || 10;
+    
+    ctx.beginPath();
+    let steps = coils * 10;
+    for(let i=0; i<=steps; i++){
+        let t = i / steps;
+        // Linear interpolation between p1 and p2
+        let base = {
+            x: p1.x + (p2.x - p1.x) * t,
+            y: p1.y + (p2.y - p1.y) * t,
+            z: p1.z + (p2.z - p1.z) * t
+        };
+        
+        // Offset for coil effect
+        let angle = (i / steps) * Math.PI * 2 * coils;
+        let offset = {
+            x: Math.cos(angle) * width,
+            y: 0,
+            z: Math.sin(angle) * width
+        };
+        
+        let p = project({x: base.x + offset.x, y: base.y + offset.y, z: base.z + offset.z});
+        if(i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+
+    // End caps
+    ctx.fillStyle = "#374151";
+    ctx.beginPath(); ctx.arc(pTop.x, pTop.y, 8, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(pBottom.x, pBottom.y, 8, 0, Math.PI*2); ctx.fill();
 });
 
 
+}
+
+function getMouse(e){
+    return {x:e.clientX,y:e.clientY-50};
+}
+
+canvas.addEventListener("mousedown",e=>{
+    let m=getMouse(e);
+
+    if(e.code==="Space"){ panning=true; return; }
+
+    let w=toWorld(m);
+
+    canvas.addEventListener("mousedown",e=>{
+    if(mode3D && e.button === 2){
+        isRotating = true;
+    }
+});
 
 canvas.addEventListener("mousemove",e=>{
-  let r=canvas.getBoundingClientRect();
-  let x=e.clientX-r.left, y=e.clientY-r.top;
-  ({x,y}=snapToGrid(x,y));
-
-  if(drawing){
-    let p = getCoords(x,y);
-    let t = tubes[tubes.length-1];
-    t.x2=p.x; t.y2=p.y; t.z2=p.z;
-  }
-
-  if(moving){
-    let dx = x - lastX;
-    let dy = y - lastY;
-
-    let moveTube = (t)=>{
-      if(view==="top"){ t.x1+=dx; t.y1+=dy; t.x2+=dx; t.y2+=dy; }
-      if(view==="side"){ t.x1+=dx; t.z1+=dy; t.x2+=dx; t.z2+=dy; }
-      if(view==="front"){ t.z1+=dx; t.y1+=dy; t.z2+=dx; t.y2+=dy; }
-      if(view==="back"){ t.z1-=dx; t.y1+=dy; t.z2-=dx; t.y2+=dy; }
-    };
-
-    if(selectedGroup){
-      selectedGroup.forEach(moveTube);
-    } else if(selectedTube){
-      moveTube(selectedTube);
+    if(isRotating){
+        camYaw += e.movementX * 0.01;
+        camPitch += e.movementY * 0.01;
     }
-
-    lastX = x;
-    lastY = y;
-  }
-
-  if(isRotating && mode==="3D"){
-    yaw += (e.clientX-lastX)*0.01;
-    pitch += (e.clientY-lastY)*0.01;
-    lastX=e.clientX; lastY=e.clientY;
-  }
 });
 
 canvas.addEventListener("mouseup",()=>{
-  if(drawing || moving){
-    saveState();
-  }
-
-  drawing=false;
-  moving=false;
-  selectedTube=null;
-  selectedGroup=null;
-  isRotating=false;
-  canvas.style.cursor = moveEnabled ? "grab" : "crosshair";
+    isRotating = false;
 });
 
-// ---------------- KEYBOARD ----------------
-document.addEventListener("keydown", e => {
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
 
-  if(tool === "join" && e.key === "Enter"){
-    if(selectedTubes.length < 2) return;
-    groups.push([...selectedTubes]);
-    selectedTubes = [];
-    saveState();
-  }
+    // detect node
+    selectedNode=null;
+    for(let n of nodes){
+        let p=project(n);
+        if(Math.hypot(p.x-m.x,p.y-m.y)<6){
+            selectedNode=n;
+        }
+    }
 
-  if(e.ctrlKey && e.key === "z"){
-    e.preventDefault();
-    undo();
-  }
+    if(tool==="draw"){
+        drawing=true;
+        startNode=findNearbyNode(w)||createNode(w.x,w.y,w.z);
+    }
 
-  if(e.ctrlKey && e.key === "y"){
-    e.preventDefault();
-    redo();
-  }
+    if(tool==="point" && selectedNode){
+        dragging=true;
+        lastMouse=m;
+    }
 
+    if(tool==="move"){
+        tubes.forEach(t=>{
+            let a=project(t.a);
+            let b=project(t.b);
+            if(dist(m,a,b)<6){
+                selectedTube=t;
+                dragging=true;
+                lastMouse=m;
+            }
+        });
+    }
+    if(tool === "axle"){
+    let nearest = null;
+    let minDist = 25;
 
+    mounts.forEach(m=>{
+        let d = Math.hypot(m.x-w.x, m.y-w.y, m.z-w.z);
+        if(d < minDist){
+            nearest = m;
+            minDist = d;
+        }
+    });
+
+    if(nearest){
+        axles.push({
+            center: nearest,
+            width: 140,
+            rot: {x:0, y:0, z:0}, // x=camber, y=yaw
+            steer: false // front axle toggle
+        });
+    }
+}
+
+    if(tool === "mount"){
+      mounts.push({
+        x:w.x,
+        y:w.y,
+        z:w.z
+      });
+    }
+
+    if(tool==="join" && selectedNode){
+        joinBuffer.push(selectedNode);
+
+        if(joinBuffer.length===2){
+            let a=joinBuffer[0];
+            let b=joinBuffer[1];
+
+            tubes.forEach(t=>{
+                if(t.a===b) t.a=a;
+                if(t.b===b) t.b=a;
+            });
+
+            nodes=nodes.filter(n=>n!==b);
+            joinBuffer=[];
+        }
+    }
+
+    if(tool==="delete"){
+        // Tubes
+        tubes=tubes.filter(t=>{
+            let a=project(t.a);
+            let b=project(t.b);
+            return dist(m,a,b)>8;
+        });
+        
+        // Components (Hubs, Rotors, Pads, Wheels, Suspensions, Mounts, Engines, Gearboxes, Diffs)
+        hubs = hubs.filter(h => Math.hypot(project(h.mount).x-m.x, project(h.mount).y-m.y) > 10);
+        rotors = rotors.filter(r => Math.hypot(project(r.hub.mount).x-m.x, project(r.hub.mount).y-m.y) > 15);
+        pads = pads.filter(p => Math.hypot(project(p.rotor.hub.mount).x-m.x, project(p.rotor.hub.mount).y-m.y) > 15);
+        wheels = wheels.filter(wh => Math.hypot(project(wh.rotor ? wh.rotor.hub.mount : wh.mount).x-m.x, project(wh.rotor ? wh.rotor.hub.mount : wh.mount).y-m.y) > 25);
+        suspensions = suspensions.filter(s => Math.hypot(project(s.p1).x-m.x, project(s.p1).y-m.y) > 15);
+        mounts = mounts.filter(mt => Math.hypot(project(mt).x-m.x, project(mt).y-m.y) > 10);
+        
+        engines = engines.filter(e => Math.hypot(project(e.mount).x-m.x, project(e.mount).y-m.y) > 20);
+        gearboxes = gearboxes.filter(g => Math.hypot(project(g.mount).x-m.x, project(g.mount).y-m.y) > 15);
+        differentials = differentials.filter(d => Math.hypot(project(d.mount).x-m.x, project(d.mount).y-m.y) > 15);
+        aArms = aArms.filter(a => Math.hypot(project(a.hub).x-m.x, project(a.hub).y-m.y) > 15);
+        panels = panels.filter(p => Math.hypot(project(p.points[0]).x-m.x, project(p.points[0]).y-m.y) > 20);
+
+        // Nodes - only if not connected to anything
+        nodes = nodes.filter(n => {
+            let p = project(n);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 6){
+                // Check if any tube uses this node
+                return tubes.some(t => t.a === n || t.b === n);
+            }
+            return true;
+        });
+    }
+
+    if(tool === "cut"){
+        let hit = null;
+        tubes.forEach(t => {
+            let a = project(t.a);
+            let b = project(t.b);
+            if(dist(m, a, b) < 6){
+                hit = t;
+            }
+        });
+
+        if(hit){
+            // Find world position of mouse click (snapped)
+            let w = toWorld(m);
+            let newNode = createNode(w.x, w.y, w.z);
+            
+            tubes.push({ a: hit.a, b: newNode, thickness: hit.thickness, material: hit.material });
+            tubes.push({ a: newNode, b: hit.b, thickness: hit.thickness, material: hit.material });
+            
+            tubes = tubes.filter(t => t !== hit);
+        }
+    }
+
+    if(tool === "select" || tool === "rotate"){
+        selectedComponent = null;
+        
+        // Check suspensions
+        suspensions.forEach(s => {
+            let p = project(s.p1);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'suspension', data: s };
+        });
+        
+        // Check hubs
+        hubs.forEach(h => {
+            let p = project(h.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'hub', data: h };
+        });
+
+        // Check wheels
+        wheels.forEach(wh => {
+            let p = project(wh.rotor ? wh.rotor.hub.mount : wh.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'wheel', data: wh };
+        });
+
+        // Check drivetrain
+        engines.forEach(e => {
+            let p = project(e.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'engine', data: e };
+        });
+        gearboxes.forEach(g => {
+            let p = project(g.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'gearbox', data: g };
+        });
+        differentials.forEach(d => {
+            let p = project(d.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'differential', data: d };
+        });
+
+        // Check axles
+        axles.forEach(axle => {
+            let p = project(axle.center);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'axle', data: axle };
+        });
+
+        // Check A-Arms
+        aArms.forEach(a => {
+            let p = project(a.hub);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'aarm', data: a };
+        });
+
+        // Check Panels
+        panels.forEach(p => {
+            let pt = project(p.points[0]);
+            if(Math.hypot(pt.x-m.x, pt.y-m.y) < 20) selectedComponent = { type: 'panel', data: p };
+        });
+        
+        updateInspector();
+    }
+
+    // VEHICLE ASSEMBLY
+    if(tool === "hub"){
+        let nearestMount = null;
+        let nearestSusp = null;
+        let minDist = 25;
+
+        mounts.forEach(mt=>{
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){
+                nearestMount = mt;
+                minDist = d;
+            }
+        });
+
+        // Also check for suspension as a mount point
+        suspensions.forEach(s => {
+            let mt = s.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){
+                nearestSusp = s;
+                minDist = d;
+            }
+        });
+
+        if(nearestSusp){
+            if(!hubs.some(h => h.suspension === nearestSusp)){
+                hubs.push({ mount: nearestSusp.mount, suspension: nearestSusp });
+            }
+        } else if(nearestMount){
+            if(!hubs.some(h => h.mount === nearestMount)){
+                hubs.push({ mount: nearestMount });
+            }
+        }
+    }
+
+    if(tool === "rotor"){
+        let nearestHub = null;
+        let minDist = 25;
+
+        hubs.forEach(h=>{
+            let mt = h.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){
+                nearestHub = h;
+                minDist = d;
+            }
+        });
+
+        if(nearestHub){
+            if(!rotors.some(r => r.hub === nearestHub)){
+                rotors.push({ hub: nearestHub });
+            }
+        }
+    }
+
+    if(tool === "pad"){
+        let nearestRotor = null;
+        let minDist = 25;
+
+        rotors.forEach(r=>{
+            let mt = r.hub.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){
+                nearestRotor = r;
+                minDist = d;
+            }
+        });
+
+        if(nearestRotor){
+            if(!pads.some(p => p.rotor === nearestRotor)){
+                pads.push({ rotor: nearestRotor });
+            }
+        }
+    }
+
+    if(tool === "wheel"){
+        let nearestRotor = null;
+        let nearestMount = null;
+        let minDist = 25;
+
+        rotors.forEach(r=>{
+            let mt = r.hub.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){ nearestRotor = r; minDist = d; }
+        });
+
+        mounts.forEach(mt=>{
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){ nearestMount = mt; minDist = d; }
+        });
+
+        if(nearestRotor){
+            if(!wheels.some(wh => wh.rotor === nearestRotor)){
+                wheels.push({ rotor: nearestRotor, radius: 20 });
+            }
+        } else if(nearestMount){
+            wheels.push({ mount: nearestMount, radius: 20 });
+        }
+    }
+
+    if(tool === "engine"){
+        let nearest = findNearestMount(w, 30);
+        if(nearest && !engines.some(e => e.mount === nearest)){
+            engines.push({ 
+                mount: nearest, 
+                rot: {x:0,y:0,z:0},
+                config: 'inline',
+                cylinders: 4,
+                forcedInduction: 'none'
+            });
+        }
+    }
+    if(tool === "gearbox"){
+        let nearest = findNearestMount(w, 25);
+        if(nearest && !gearboxes.some(g => g.mount === nearest)){
+            gearboxes.push({ 
+                mount: nearest, 
+                rot: {x:0,y:0,z:0},
+                type: 'manual'
+            });
+        }
+    }
+    if(tool === "diff"){
+        let nearest = findNearestMount(w, 25);
+        if(nearest && !differentials.some(d => d.mount === nearest)) differentials.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+
+    function findNearestMount(pos, limit) {
+        let nearest = null;
+        let minDist = limit;
+        mounts.forEach(mt => {
+            let d = Math.hypot(mt.x-pos.x, mt.y-pos.y, mt.z-pos.z);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        axles.forEach(axle => {
+            if(axle.mounts){
+                axle.mounts.forEach(mt => {
+                    let d = Math.hypot(mt.x-pos.x, mt.y-pos.y, mt.z-pos.z);
+                    if(d < minDist){ nearest = mt; minDist = d; }
+                });
+            }
+        });
+        return nearest;
+    }
+
+    if(tool === "aarm"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest){
+            aArmBuffer.push(nearest);
+            if(aArmBuffer.length === 3){
+                aArms.push({
+                    p1: aArmBuffer[0],
+                    p2: aArmBuffer[1],
+                    hub: aArmBuffer[2],
+                    rot: {x:0, y:0, z:0}
+                });
+                aArmBuffer = [];
+            }
+        }
+    }
+
+    if(tool === "suspension"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest){
+            suspensionBuffer.push(nearest);
+            if(suspensionBuffer.length === 2){
+                suspensions.push({
+                    p1: suspensionBuffer[0],
+                    p2: suspensionBuffer[1],
+                    springWidth: 10,
+                    coils: 10
+                });
+                suspensionBuffer = [];
+            }
+        }
+    }
+
+    if(tool === "panel"){
+        let nearest = null;
+        let minDist = 20;
+
+        // Check mounts and nodes
+        mounts.forEach(mt => {
+            let d = Math.hypot(project(mt).x - m.x, project(mt).y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let d = Math.hypot(project(n).x - m.x, project(n).y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+
+        // If clicking empty space, create a node
+        if(!nearest){
+            nearest = createNode(w.x, w.y, w.z);
+        }
+
+        if(nearest){
+            if(panelBuffer.length >= 3 && nearest === panelBuffer[0]){
+                panels.push({
+                    points: [...panelBuffer],
+                    color: '#3b82f6',
+                    opacity: 0.5
+                });
+                panelBuffer = [];
+            } else if (!panelBuffer.includes(nearest)) {
+                panelBuffer.push(nearest);
+            }
+        }
+    }
 });
 
-// ---------------- DRAW ----------------
-function drawGrid(){
-  ctx.strokeStyle="#222";
-  for(let x=centerX%gridSize;x<800;x+=gridSize){
-    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,500);ctx.stroke();
-  }
-  for(let y=centerY%gridSize;y<500;y+=gridSize){
-    ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(800,y);ctx.stroke();
-  }
+function calculateMaterials(){
+    let totalLength = 0;
+    let materials = {
+        steel:0,
+        aluminum:0,
+        carbon:0
+    };
 
-  ctx.strokeStyle="red";
-  ctx.lineWidth=2;
+    tubes.forEach(t=>{
+        let dx = t.a.x - t.b.x;
+        let dy = t.a.y - t.b.y;
+        let dz = t.a.z - t.b.z;
 
-  ctx.beginPath(); ctx.moveTo(centerX,0); ctx.lineTo(centerX,500); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(0,centerY); ctx.lineTo(800,centerY); ctx.stroke();
+        let length = Math.sqrt(dx*dx + dy*dy + dz*dz);
 
-  ctx.lineWidth=1;
+        totalLength += length;
+
+        if(t.material){
+            materials[t.material] += length;
+        }
+    });
+
+    console.log("=== BUILD REPORT ===");
+    console.log("Total Tube Length:", Math.round(totalLength));
+
+    console.log("Steel:", Math.round(materials.steel));
+    console.log("Aluminum:", Math.round(materials.aluminum));
+    console.log("Carbon:", Math.round(materials.carbon));
+
+    console.log("Hubs:", hubs.length);
+    console.log("Rotors:", rotors.length);
+    console.log("Brake Pads:", pads.length);
+    console.log("Wheels:", wheels.length);
+    console.log("Suspension Points:", suspensions.length);
+    console.log("Axles:", axles.length);
+    console.log("Panels:", panels.length);
+
+    alert(
+        "Total Tube Length: " + Math.round(totalLength) + "mm\n" +
+        "Steel: " + Math.round(materials.steel) + "mm\n" +
+        "Aluminum: " + Math.round(materials.aluminum) + "mm\n" +
+        "Carbon: " + Math.round(materials.carbon) + "mm\n\n" +
+        "Components:\n" +
+        "- Hubs: " + hubs.length + "\n" +
+        "- Rotors: " + rotors.length + "\n" +
+        "- Brake Pads: " + pads.length + "\n" +
+        "- Wheels: " + wheels.length + "\n" +
+        "- Axles: " + axles.length + "\n" +
+        "- Suspension: " + suspensions.length + "\n" +
+        "- A-Arms: " + aArms.length + "\n" +
+        "- Engines: " + engines.length + "\n" +
+        "- Gearboxes: " + gearboxes.length + "\n" +
+        "- Differentials: " + differentials.length + "\n" +
+        "- Panels: " + panels.length
+    );
 }
 
-function draw(){
-  ctx.clearRect(0,0,800,500);
-  drawGrid();
+canvas.addEventListener("mousemove",e=>{
+    let m=getMouse(e);
 
-  tubes.forEach(t=>{
-    let a=project(t.x1,t.y1,t.z1);
-    let b=project(t.x2,t.y2,t.z2);
+    if(panning){
+        offsetX+=e.movementX;
+        offsetY+=e.movementY;
+        return;
+    }
 
-    let isSelected = selectedTubes.includes(t);
-    let isGrouped = groups.some(g => g.includes(t));
+    let w=toWorld(m);
 
-    ctx.beginPath();
-    ctx.moveTo(a.x,a.y);
-    ctx.lineTo(b.x,b.y);
+    if(tool==="point" && dragging && selectedNode){
+        selectedNode.x=w.x;
+        selectedNode.y=w.y;
+        selectedNode.z=w.z;
+    }
 
-    ctx.lineWidth = isSelected ? 8 : 6;
-    ctx.strokeStyle = isSelected ? "#00ff00" : (isGrouped ? "#ffaa00" : "#aaa");
+    if(tool==="move" && dragging && selectedTube){
+        let dx=e.movementX;
+        let dy=e.movementY;
 
-    ctx.lineCap="round";
-    ctx.stroke();
-  });
+        selectedTube.a.x+=dx;
+        selectedTube.a.z+=dy;
 
-  bends.forEach(b=>{
-    let a = project(b.x1,b.y1,b.z1);
-    let c = project((b.x1+b.x2)/2, b.y1+50, (b.z1+b.z2)/2);
-    let d = project(b.x2,b.y2,b.z2);
+        selectedTube.b.x+=dx;
+        selectedTube.b.z+=dy;
+    }
+});
 
-    ctx.beginPath();
-    ctx.moveTo(a.x,a.y);
-    ctx.quadraticCurveTo(c.x,c.y,d.x,d.y);
+canvas.addEventListener("mouseup",e=>{
+    let m=getMouse(e);
 
-    ctx.strokeStyle = "#00e5ff";
-    ctx.lineWidth = 6;
-    ctx.stroke();
-  });
+    if(tool==="draw" && drawing){
+        let w=toWorld(m);
+        let end=findNearbyNode(w)||createNode(w.x,w.y,w.z);
 
-  requestAnimationFrame(draw);
+        tubes.push({
+    a:startNode,
+    b:end,
+    thickness:6,
+    material: currentMaterial
+});
+
+        drawing=false;
+    }
+
+    dragging=false;
+    panning=false;
+});
+
+// (Code moved to main mousedown listener)
+
+window.addEventListener("keydown",e=>{
+    if((e.key==="Delete"||e.key==="Backspace"||e.key==="Enter") && selectedTube){
+        tubes=tubes.filter(t=>t!==selectedTube);
+        selectedTube=null;
+    }
+});
+
+window.addEventListener("keydown", e => {
+    let a = axles[axles.length - 1];
+    if(!a) return;
+
+    // steering (yaw)
+    if(e.key === "ArrowLeft") a.yaw -= 0.05;
+    if(e.key === "ArrowRight") a.yaw += 0.05;
+
+    // camber tilt
+    if(e.key === "ArrowUp") a.camber += 0.05;
+    if(e.key === "ArrowDown") a.camber -= 0.05;
+
+    // toggle front steering axle
+    if(e.key === "s") a.steer = !a.steer;
+});
+
+function dist(p,a,b){
+    let A=p.x-a.x,B=p.y-a.y,C=b.x-a.x,D=b.y-a.y;
+    let t=Math.max(0,Math.min(1,(A*C+B*D)/(C*C+D*D)));
+    let x=a.x+t*C,y=a.y+t*D;
+    return Math.hypot(p.x-x,p.y-y);
 }
 
-// ---------------- INIT ----------------
-updateToolUI();
-saveState();
-draw();
+function loop(){
+    render();
+    requestAnimationFrame(loop);
+}
+loop();
+
+// Initialize UI
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default tool to Draw Tube (3rd button in Editor section)
+    const drawBtn = document.querySelectorAll('.section .btn-group button')[2];
+    setTool('draw', drawBtn);
+    
+    // Set default material to Steel
+    const steelBtn = document.querySelector('.material-btn');
+    setMaterial('steel', steelBtn);
+});
+
+function saveProject() {
+    let idCounter = 1;
+    let assignId = (obj) => { if(obj && !obj._id) obj._id = idCounter++; };
+    
+    nodes.forEach(assignId);
+    mounts.forEach(assignId);
+    
+    let data = {
+        nodes: nodes.map(n => ({...n})),
+        mounts: mounts.map(m => ({...m})),
+        tubes: tubes.map(t => ({...t, a: t.a._id, b: t.b._id})),
+        suspensions: suspensions.map(s => ({...s, p1: s.p1._id, p2: s.p2._id})),
+        hubs: hubs.map(h => ({...h, mount: h.mount._id, suspension: h.suspension ? suspensions.indexOf(h.suspension) : null})),
+        rotors: rotors.map(r => ({...r, hub: hubs.indexOf(r.hub)})),
+        pads: pads.map(p => ({...p, rotor: rotors.indexOf(p.rotor)})),
+        wheels: wheels.map(w => ({...w, rotor: w.rotor ? rotors.indexOf(w.rotor) : null, mount: w.mount ? w.mount._id : null})),
+        engines: engines.map(e => ({...e, mount: e.mount._id})),
+        gearboxes: gearboxes.map(g => ({...g, mount: g.mount._id})),
+        differentials: differentials.map(d => ({...d, mount: d.mount._id})),
+        aArms: aArms.map(a => ({...a, p1: a.p1._id, p2: a.p2._id, hub: a.hub._id})),
+        panels: panels.map(p => ({...p, points: p.points.map(pt => pt._id)})),
+        axles: axles.map(a => ({...a, center: a.center._id, mounts: a.mounts ? a.mounts.map(m => m._id) : null}))
+    };
+    
+    nodes.forEach(n => delete n._id);
+    mounts.forEach(m => delete m._id);
+
+    let blob = new Blob([JSON.stringify(data)], {type: "application/json"});
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = "chassis_project.json";
+    a.click();
+}
+
+function loadProject(event) {
+    let file = event.target.files[0];
+    if(!file) return;
+    
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data = JSON.parse(e.target.result);
+            
+            nodes = data.nodes || [];
+            mounts = data.mounts || [];
+            
+            let pointMap = {};
+            nodes.forEach(n => pointMap[n._id] = n);
+            mounts.forEach(m => pointMap[m._id] = m);
+            
+            tubes = (data.tubes || []).map(t => ({...t, a: pointMap[t.a], b: pointMap[t.b]}));
+            suspensions = (data.suspensions || []).map(s => ({...s, p1: pointMap[s.p1], p2: pointMap[s.p2]}));
+            hubs = (data.hubs || []).map(h => ({...h, mount: pointMap[h.mount], suspension: h.suspension !== null ? suspensions[h.suspension] : null}));
+            rotors = (data.rotors || []).map(r => ({...r, hub: hubs[r.hub]}));
+            pads = (data.pads || []).map(p => ({...p, rotor: rotors[p.rotor]}));
+            wheels = (data.wheels || []).map(w => ({...w, rotor: w.rotor !== null ? rotors[w.rotor] : null, mount: w.mount ? pointMap[w.mount] : null}));
+            engines = (data.engines || []).map(eng => ({...eng, mount: pointMap[eng.mount]}));
+            gearboxes = (data.gearboxes || []).map(g => ({...g, mount: pointMap[g.mount]}));
+            differentials = (data.differentials || []).map(d => ({...d, mount: pointMap[d.mount]}));
+            aArms = (data.aArms || []).map(a => ({...a, p1: pointMap[a.p1], p2: pointMap[a.p2], hub: pointMap[a.hub]}));
+            panels = (data.panels || []).map(p => ({...p, points: p.points.map(id => pointMap[id])}));
+            axles = (data.axles || []).map(a => ({...a, center: pointMap[a.center], mounts: a.mounts ? a.mounts.map(id => pointMap[id]) : null}));
+            
+            nodes.forEach(n => delete n._id);
+            mounts.forEach(m => delete m._id);
+            
+            selectedComponent = null;
+            selectedTube = null;
+            selectedNode = null;
+            updateInspector();
+            
+            alert("Project loaded successfully!");
+        } catch(err) {
+            console.error(err);
+            alert("Failed to load project. Invalid file format.");
+        }
+        event.target.value = ''; // Reset input
+    };
+    reader.readAsText(file);
+}
+
+function openSettings() {
+    alert("Settings panel coming soon! Customize grid size, UI colors, and snapping rules here.");
+}
 </script>
 
 </body>
