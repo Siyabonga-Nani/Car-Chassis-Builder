@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Car Builder</title>
+    <title>Car Builder </title>
 
     <style>
 body{
@@ -128,6 +128,78 @@ button.active {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
+/* Dropdown Styles */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #1e293b;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 1000;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.dropdown-content a {
+    color: #f1f5f9;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 13px;
+}
+.dropdown-content a:hover {
+    background-color: #334155;
+}
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.8);
+    align-items: center;
+    justify-content: center;
+}
+.modal-content {
+    background-color: #0f172a;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    width: 320px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+.modal-content h3 { margin-top: 0; margin-bottom: 15px; color: #f1f5f9; }
+.modal-content label { display: block; margin-bottom: 5px; font-size: 12px; color: #94a3b8; }
+.modal-content input, .modal-content select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 15px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    color: white;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+.modal-content .btn-group {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+.modal-content button { flex: 1; }
+
+
 .material-selector {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -182,10 +254,34 @@ b {
     </div>
     
     <div style="display: flex; align-items: center; gap: 10px;">
-        <button onclick="saveProject()" style="width: auto;">💾 Save Project</button>
-        <button onclick="document.getElementById('fileInput').click()" style="width: auto;">📂 Load Project</button>
+        <span style="font-size: 11px; color: #94a3b8; margin-right: 10px;">Right-Click: Rotate | Middle-Click: Focus | Scroll: Zoom</span>
+        <div class="dropdown">
+            <button class="dropbtn" style="width: auto;">⚙️ Settings</button>
+            <div class="dropdown-content">
+                <a href="#" onclick="toggleGrid()" id="gridToggleLink">Grid: ON</a>
+                <a href="#" onclick="showSaveModal()">💾 Save Project</a>
+                <a href="#" onclick="document.getElementById('fileInput').click()">📂 Load Project</a>
+            </div>
+        </div>
         <input type="file" id="fileInput" style="display:none" onchange="loadProject(event)" accept=".json">
-        <button onclick="openSettings()" style="width: auto;">⚙️ Settings</button>
+    </div>
+</div>
+
+<div id="saveModal" class="modal">
+    <div class="modal-content">
+        <h3>Save Project</h3>
+        <label>Project Name</label>
+        <input type="text" id="saveName" placeholder="My Chassis">
+        <label>Format</label>
+        <select id="saveFormat">
+            <option value="json">Project File (.json)</option>
+            <option value="obj">3D Printer (.obj)</option>
+            <option value="dxf">CNC/CAD (.dxf)</option>
+        </select>
+        <div class="btn-group">
+            <button onclick="closeSaveModal()" style="background: #334155;">Cancel</button>
+            <button onclick="confirmSave()" style="background: #3b82f6;">Save</button>
+        </div>
     </div>
 </div>
 
@@ -201,6 +297,12 @@ b {
             <button onclick="setTool('join', this)">Join Nodes</button>
             <button onclick="setTool('cut', this)">Cut Tube</button>
             <button onclick="setTool('delete', this)">Delete</button>
+            <button onclick="setTool('link', this)">Link / Group</button>
+            <div id="linkControls" style="display:none; margin-top:5px; gap:4px; flex-direction:column">
+                <button onclick="createLink()" style="background: #22c55e; font-size: 11px; justify-content: center;">Confirm Link</button>
+                <button onclick="clearLinkBuffer()" style="background: #ef4444; font-size: 11px; justify-content: center;">Cancel Selection</button>
+            </div>
+            <button onclick="clearAllLinks()" style="margin-top: 10px; border: 1px dashed rgba(255,255,255,0.2); font-size: 11px; color: #94a3b8; justify-content: center;">Clear All Links</button>
         </div>
     </div>
 
@@ -238,6 +340,8 @@ b {
             <button onclick="setTool('engine', this)">Add Engine</button>
             <button onclick="setTool('gearbox', this)">Add Gearbox</button>
             <button onclick="setTool('diff', this)">Add Differential</button>
+            <button onclick="setTool('driveshaft', this)">Add Driveshaft</button>
+            <button onclick="setTool('electricMotor', this)">Add Electric Motor</button>
         </div>
     </div>
 
@@ -254,6 +358,68 @@ b {
         <div class="section-title"><span>🪟</span> Body & Interior</div>
         <div class="btn-group">
             <button onclick="setTool('panel', this)">Add Panel</button>
+            <button onclick="setTool('window', this)">Add Window</button>
+            <button onclick="setTool('hinge', this)">Add Hinge</button>
+            <button onclick="setTool('seat', this)">Add Seat</button>
+            <button onclick="setTool('handbrake', this)">Add Handbrake</button>
+            <button onclick="setTool('shiftKnob', this)">Add Shift Knob</button>
+            <button onclick="setTool('steeringWheel', this)">Add Steering Wheel</button>
+            <button onclick="setTool('speedometer', this)">Add Speedometer</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>💡</span> Lighting</div>
+        <div class="btn-group">
+            <button onclick="setTool('headlight', this)">Add Front Headlight</button>
+            <button onclick="setTool('tailLight', this)">Add Rear Tail Light</button>
+            <button onclick="setTool('fogLight', this)">Add Fog Light</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>⚡</span> Electronics</div>
+        <div class="btn-group">
+            <button onclick="setTool('module', this)">Add Module</button>
+            <button onclick="setTool('battery', this)">Add Battery</button>
+            <button onclick="setTool('hybridBattery', this)">Add Hybrid Battery</button>
+            <button onclick="setTool('fusebox', this)">Add Fuse Box</button>
+            <button onclick="setTool('harness', this)">Add Wire Harness</button>
+            <button onclick="setTool('hybridHarness', this)">Add Hybrid Harness</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>❄️</span> Cooling</div>
+        <div class="btn-group">
+            <button onclick="setTool('radiator', this)">Add Radiator</button>
+            <button onclick="setTool('expansionTank', this)">Add Expansion Tank</button>
+            <button onclick="setTool('coolantHose', this)">Add Radiator Hose</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>🛑</span> Braking</div>
+        <div class="btn-group">
+            <button onclick="setTool('brakeReservoir', this)">Add Master Cylinder</button>
+            <button onclick="setTool('brakeLine', this)">Add Brake Line</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>🏎️</span> Steering</div>
+        <div class="btn-group">
+            <button onclick="setTool('steeringRack', this)">Add Rack</button>
+            <button onclick="setTool('steeringWheel', this)">Add Wheel</button>
+            <button onclick="setTool('steeringColumn', this)">Add Column</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>⛽</span> Fuel System</div>
+        <div class="btn-group">
+            <button onclick="setTool('fuelTank', this)">Add Fuel Tank</button>
+            <button onclick="setTool('fuelLine', this)">Add Fuel Line</button>
         </div>
     </div>
 
@@ -282,6 +448,7 @@ let H=window.innerHeight-50;
 canvas.width=W;
 canvas.height=H;
 
+let gridEnabled = true;
 let gridSize=25;
 let offsetX=W/2;
 let offsetY=H/2;
@@ -317,6 +484,8 @@ let selectedMount = null;
 let camYaw = 0;
 let camPitch = 0;
 let isRotating = false;
+let camTarget = {x:0, y:0, z:0};
+let camZoom = 1.0;
 
 let axles = [];
 let hubs = [];
@@ -333,12 +502,131 @@ let aArmBuffer = [];
 let suspensionBuffer = [];
 let panels = [];
 let panelBuffer = [];
+let windows = [];
+let windowBuffer = [];
+let driveshafts = [];
+let driveshaftBuffer = [];
+let electricMotors = [];
+let modules = [];
+let batteries = [];
+let hybridBatteries = [];
+let harnesses = [];
+let harnessBuffer = [];
+let radiators = [];
+let expansionTanks = [];
+let coolantHoses = [];
+let hoseBuffer = [];
+let brakeReservoirs = [];
+let brakeLines = [];
+let brakeLineBuffer = [];
+let steeringRacks = [];
+let steeringWheels = [];
+let steeringColumns = [];
+let steeringBuffer = [];
+let seats = [];
+let handbrakes = [];
+let shiftKnobs = [];
+let speedometers = [];
+let hinges = [];
+let fuelTanks = [];
+let fuelLines = [];
+let fuelLineBuffer = [];
+let links = [];
+let linkBuffer = [];
+let lights = [];
+
+function createLink() {
+    if (linkBuffer.length > 1) {
+        links.push([...linkBuffer]);
+        linkBuffer = [];
+        render();
+    } else {
+        alert("Select at least 2 items to link.");
+    }
+}
+
+function clearLinkBuffer() {
+    linkBuffer = [];
+    render();
+}
+
+function clearAllLinks() {
+    if (confirm("Clear all links?")) {
+        links = [];
+        render();
+    }
+}
+
+function getLinkedTargets(root) {
+    let targets = new Set();
+    let queue = [root];
+    targets.add(root);
+    
+    let processed = new Set();
+    
+    while(queue.length > 0) {
+        let current = queue.shift();
+        if (processed.has(current)) continue;
+        processed.add(current);
+        
+        for(let link of links) {
+            if(link.includes(current)) {
+                for(let item of link) {
+                    if(!targets.has(item)) {
+                        targets.add(item);
+                        queue.push(item);
+                    }
+                }
+            }
+        }
+    }
+    return Array.from(targets);
+}
+
+function cleanLinks() {
+    links = links.map(link => link.filter(item => {
+        if (nodes.includes(item)) return true;
+        if (tubes.includes(item)) return true;
+        if (mounts.includes(item)) return true;
+        if (wheels.includes(item)) return true;
+        if (engines.includes(item)) return true;
+        if (gearboxes.includes(item)) return true;
+        if (differentials.includes(item)) return true;
+        if (electricMotors.includes(item)) return true;
+        if (axles.includes(item)) return true;
+        if (suspensions.includes(item)) return true;
+        if (hubs.includes(item)) return true;
+        return false;
+    })).filter(link => link.length > 1);
+}
+
+function toggleGrid(){
+    gridEnabled = !gridEnabled;
+    let text = "Grid: " + (gridEnabled ? "ON" : "OFF");
+    let btn = document.getElementById('gridToggle');
+    if(btn) btn.innerText = text;
+    let link = document.getElementById('gridToggleLink');
+    if(link) link.innerText = text;
+}
+
+function snap(v){
+    if(!gridEnabled) return v;
+    return Math.round(v/gridSize)*gridSize;
+}
 
 function setTool(name, btn) {
     tool = name;
     aArmBuffer = []; 
     suspensionBuffer = []; 
-    panelBuffer = []; // Clear buffer when switching tools
+    panelBuffer = []; 
+    windowBuffer = [];
+    driveshaftBuffer = []; 
+    harnessBuffer = []; 
+    hoseBuffer = [];
+    brakeLineBuffer = [];
+    steeringBuffer = []; 
+    fuelLineBuffer = []; 
+    linkBuffer = []; 
     // Highlight active button
     document.querySelectorAll('#leftbar button').forEach(b => b.classList.remove('active'));
     if(btn) btn.classList.add('active');
@@ -349,6 +637,50 @@ function setMaterial(type, btn) {
     // Highlight active material button
     document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('active'));
     if(btn) btn.classList.add('active');
+}
+
+function moveSelected(dx, dy, dz) {
+    let initialTargets = [];
+    if (selectedNode) initialTargets.push(selectedNode);
+    if (selectedTube) initialTargets.push(selectedTube);
+    if (selectedMount) initialTargets.push(selectedMount);
+    if (selectedComponent) initialTargets.push(selectedComponent.data);
+    
+    if (initialTargets.length === 0) return;
+
+    // Find all linked items
+    let allLinked = [];
+    initialTargets.forEach(t => {
+        allLinked = allLinked.concat(getLinkedTargets(t));
+    });
+    
+    // Convert linked items to actual coordinate targets (nodes/points)
+    let targets = [];
+    allLinked.forEach(item => {
+        if (item.x !== undefined && item.y !== undefined) {
+            targets.push(item);
+        } else if (item.a && item.b) {
+            targets.push(item.a);
+            targets.push(item.b);
+        } else if (item.points) {
+            item.points.forEach(p => targets.push(p));
+        } else if (item.mount) {
+            targets.push(item.mount);
+        } else if (item.center) {
+            targets.push(item.center);
+            if (item.mounts) item.mounts.forEach(m => targets.push(m));
+        }
+    });
+    
+    let uniqueTargets = [...new Set(targets)];
+    
+    uniqueTargets.forEach(t => {
+        t.x += dx;
+        t.y += dy;
+        t.z += dz;
+    });
+    
+    render();
 }
 
 function updateInspector(){
@@ -362,11 +694,28 @@ function updateInspector(){
     html += `<b style="color:#60a5fa">${selectedComponent.type.toUpperCase()}</b>`;
     
     let obj = selectedComponent.data;
+    let pos = obj.mount || (obj.x !== undefined ? obj : null);
+    if(pos) {
+        html += `<div style="font-size:10px; color:#9ca3af; margin-top:4px">Pos: ${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}</div>`;
+    }
+
     if(!obj.rot) obj.rot = {x:0, y:0, z:0};
 
     // Generic Rotation Controls for ALL vehicle parts
     html += `
-        <div style="margin-top:10px; border-top:1px solid #374151; pt:5px">
+        <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+            <label style="font-size:11px; color:#9ca3af">Nudge Position</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-top:5px">
+                <button onclick="moveSelected(0,25,0); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Up</button>
+                <button onclick="moveSelected(0,-25,0); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Down</button>
+                <button onclick="moveSelected(-25,0,0); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Left</button>
+                <button onclick="moveSelected(25,0,0); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Right</button>
+                <button onclick="moveSelected(0,0,-25); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Fwd</button>
+                <button onclick="moveSelected(0,0,25); updateInspector()" style="padding:4px; font-size:10px; justify-content:center">Back</button>
+            </div>
+        </div>
+
+        <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
             <label style="font-size:11px; color:#9ca3af">Rotation (Yaw / Pitch / Roll)</label>
             <div>
                 <label style="font-size:10px">Yaw (Y): ${Math.round(obj.rot.y)}°</label>
@@ -480,12 +829,124 @@ function updateInspector(){
             </div>
         `;
     }
+
+    if(selectedComponent.type === "window"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Window Styling</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Tint Color</label>
+                    <input type="color" value="${obj.color || '#e0f2fe'}" 
+                        style="width:100%"
+                        onchange="selectedComponent.data.color=this.value; updateInspector()">
+                </div>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Opacity: ${Math.round((obj.opacity !== undefined ? obj.opacity : 0.3) * 100)}%</label>
+                    <input type="range" min="5" max="90" value="${Math.round((obj.opacity !== undefined ? obj.opacity : 0.3) * 100)}" 
+                        style="width:100%"
+                        oninput="selectedComponent.data.opacity=parseInt(this.value)/100; updateInspector()">
+                </div>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "electricMotor"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Motor Configuration</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Size</label>
+                    <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                        onchange="selectedComponent.data.size=this.value; updateInspector()">
+                        <option value="small" ${obj.size==='small'?'selected':''}>Small</option>
+                        <option value="big" ${obj.size==='big'?'selected':''}>Big</option>
+                        <option value="large" ${obj.size==='large'?'selected':''}>Large</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "hinge"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Hinge Configuration</label>
+                <div style="margin-top:5px">
+                    <label style="font-size:10px">Type</label>
+                    <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                        onchange="selectedComponent.data.hingeType=this.value; updateInspector()">
+                        <option value="door" ${obj.hingeType==='door'?'selected':''}>Door Hinge</option>
+                        <option value="bonnet" ${obj.hingeType==='bonnet'?'selected':''}>Bonnet/Hood Hinge</option>
+                        <option value="trunk" ${obj.hingeType==='trunk'?'selected':''}>Trunk/Boot Hinge</option>
+                        <option value="scissor" ${obj.hingeType==='scissor'?'selected':''}>Scissor Door Hinge</option>
+                        <option value="gullwing" ${obj.hingeType==='gullwing'?'selected':''}>Gullwing Hinge</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "module"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Module Type</label>
+                <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                    onchange="selectedComponent.data.moduleType=this.value; updateInspector()">
+                    <option value="ecu" ${obj.moduleType==='ecu'?'selected':''}>Engine ECU</option>
+                    <option value="bsm" ${obj.moduleType==='bsm'?'selected':''}>BSM (Engine Unit)</option>
+                    <option value="bsi" ${obj.moduleType==='bsi'?'selected':''}>BSI (Body Unit)</option>
+                    <option value="airbag" ${obj.moduleType==='airbag'?'selected':''}>Airbag Module</option>
+                    <option value="fusebox" ${obj.moduleType==='fusebox'?'selected':''}>Fuse Box</option>
+                </select>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "radiator"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Radiator Type</label>
+                <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                    onchange="selectedComponent.data.radType=this.value; updateInspector()">
+                    <option value="front" ${obj.radType==='front'?'selected':''}>Front Standard</option>
+                    <option value="double" ${obj.radType==='double'?'selected':''}>Double Core</option>
+                    <option value="aux" ${obj.radType==='aux'?'selected':''}>Auxiliary</option>
+                </select>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "fuelTank"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Fuel Tank Type</label>
+                <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                    onchange="selectedComponent.data.tankType=this.value; updateInspector()">
+                    <option value="std" ${obj.tankType==='std'?'selected':''}>Standard Tank</option>
+                    <option value="cell" ${obj.tankType==='cell'?'selected':''}>Racing Fuel Cell</option>
+                    <option value="can" ${obj.tankType==='can'?'selected':''}>Small Fuel Can</option>
+                </select>
+            </div>
+        `;
+    }
+
+    if(selectedComponent.type === "seat"){
+        html += `
+            <div style="margin-top:10px; border-top:1px solid #374151; padding-top:5px">
+                <label style="font-size:11px; color:#9ca3af">Seat Type</label>
+                <select style="width:100%; background:#0f172a; color:white; border:1px solid #374151; font-size:11px"
+                    onchange="selectedComponent.data.seatType=this.value; updateInspector()">
+                    <option value="bucket" ${obj.seatType==='bucket'?'selected':''}>Racing Bucket</option>
+                    <option value="std" ${obj.seatType==='std'?'selected':''}>Standard Seat</option>
+                    <option value="bench" ${obj.seatType==='bench'?'selected':''}>Bench Seat</option>
+                </select>
+            </div>
+        `;
+    }
     
     html += `</div>`;
     info.innerHTML = html;
 }
-
-function snap(v){ return Math.round(v/gridSize)*gridSize; }
 
 function createNode(x,y,z){
     let n={x,y,z};
@@ -505,19 +966,24 @@ function findNearbyNode(p){
 }
 
 function project(p){
+    let wp = getWorldPos(p);
     if(!mode3D){
-        if(view==="top") return {x:offsetX+p.x, y:offsetY+p.z};
-        if(view==="bottom") return {x:offsetX+p.x, y:offsetY-p.z};
-        if(view==="front") return {x:offsetX+p.x, y:offsetY-p.y};
-        if(view==="back") return {x:offsetX-p.x, y:offsetY-p.y};
-        if(view==="left") return {x:offsetX-p.z, y:offsetY-p.y};
-        if(view==="right") return {x:offsetX+p.z, y:offsetY-p.y};
+        let dx = wp.x - camTarget.x;
+        let dy = wp.y - camTarget.y;
+        let dz = wp.z - camTarget.z;
+
+        if(view==="top") return {x:offsetX+dx*camZoom, y:offsetY+dz*camZoom};
+        if(view==="bottom") return {x:offsetX+dx*camZoom, y:offsetY-dz*camZoom};
+        if(view==="front") return {x:offsetX+dx*camZoom, y:offsetY-dy*camZoom};
+        if(view==="back") return {x:offsetX-dx*camZoom, y:offsetY-dy*camZoom};
+        if(view==="left") return {x:offsetX-dz*camZoom, y:offsetY-dy*camZoom};
+        if(view==="right") return {x:offsetX+dz*camZoom, y:offsetY-dy*camZoom};
     }
 
     // 3D projection
-    let x = p.x;
-    let y = p.y;
-    let z = p.z;
+    let x = wp.x - camTarget.x;
+    let y = wp.y - camTarget.y;
+    let z = wp.z - camTarget.z;
 
     // rotate Y (yaw)
     let cosY = Math.cos(camYaw);
@@ -534,7 +1000,7 @@ function project(p){
     dz = sinX * y + cosX * dz;
 
     // perspective
-    let scale = 400 / (400 + dz);
+    let scale = (400 / (400 + dz)) * camZoom;
 
     return {
         x: offsetX + dx * scale,
@@ -542,37 +1008,96 @@ function project(p){
     };
 }
 
-function toWorld(m){
-    let x=m.x-offsetX;
-    let y=m.y-offsetY;
+function getWorldPos(pt){
+    if(!pt) return {x:0,y:0,z:0};
+    for(let ax of axles){
+        if(ax.mounts && ax.mounts.includes(pt)){
+            let rel = {x: pt.x - ax.center.x, y: pt.y - ax.center.y, z: pt.z - ax.center.z};
+            let r = rotate(rel, ax.rot || {x:0,y:0,z:0});
+            return {x: ax.center.x + r.x, y: ax.center.y + r.y, z: ax.center.z + r.z};
+        }
+    }
+    return pt;
+}
 
-    if(view==="top") return {x:snap(x),y:0,z:snap(y)};
-    if(view==="bottom") return {x:snap(x),y:0,z:snap(-y)};
-    if(view==="front") return {x:snap(x),y:snap(-y),z:0};
-    if(view==="back") return {x:snap(-x),y:snap(-y),z:0};
-    if(view==="left") return {x:0,y:snap(-y),z:snap(-x)};
-    if(view==="right") return {x:0,y:snap(-y),z:snap(x)};
+function toWorld(m){
+    let x=(m.x-offsetX)/camZoom;
+    let y=(m.y-offsetY)/camZoom;
+
+    if(!mode3D) {
+        if(view==="top") return {x:snap(x+camTarget.x),y:snap(camTarget.y),z:snap(y+camTarget.z)};
+        if(view==="bottom") return {x:snap(x+camTarget.x),y:snap(camTarget.y),z:snap(-y+camTarget.z)};
+        if(view==="front") return {x:snap(x+camTarget.x),y:snap(-y+camTarget.y),z:snap(camTarget.z)};
+        if(view==="back") return {x:snap(-x+camTarget.x),y:snap(-y+camTarget.y),z:snap(camTarget.z)};
+        if(view==="left") return {x:snap(camTarget.x),y:snap(-y+camTarget.y),z:snap(-x+camTarget.z)};
+        if(view==="right") return {x:snap(camTarget.x),y:snap(-y+camTarget.y),z:snap(x+camTarget.z)};
+    } else {
+        // Edit in 3D mode on a plane parallel to screen at camTarget
+        let dx_cam = x;
+        let dy_cam = -y;
+        let dz_cam = 0;
+
+        let cosX = Math.cos(camPitch);
+        let sinX = Math.sin(camPitch);
+        let y_temp = cosX * dy_cam + sinX * dz_cam;
+        let dz_temp = -sinX * dy_cam + cosX * dz_cam;
+
+        let cosY = Math.cos(camYaw);
+        let sinY = Math.sin(camYaw);
+        let wx = cosY * dx_cam + sinY * dz_temp;
+        let wz = -sinY * dx_cam + cosY * dz_temp;
+        let wy = y_temp;
+
+        return {
+            x: snap(camTarget.x + wx),
+            y: snap(camTarget.y + wy),
+            z: snap(camTarget.z + wz)
+        };
+    }
 }
 
 function drawGrid(){
+    if(!gridEnabled) return;
     ctx.strokeStyle="#1e293b";
 
-    for(let x=-2000;x<2000;x+=gridSize){
-        let p1=project({x:x,y:0,z:-2000});
-        let p2=project({x:x,y:0,z:2000});
-        ctx.beginPath();
-        ctx.moveTo(p1.x,p1.y);
-        ctx.lineTo(p2.x,p2.y);
-        ctx.stroke();
-    }
+    let cx = Math.round(camTarget.x / gridSize) * gridSize;
+    let cz = Math.round(camTarget.z / gridSize) * gridSize;
+    let cy = Math.round(camTarget.y / gridSize) * gridSize;
+    let range = 2000;
 
-    for(let z=-2000;z<2000;z+=gridSize){
-        let p1=project({x:-2000,y:0,z:z});
-        let p2=project({x:2000,y:0,z:z});
-        ctx.beginPath();
-        ctx.moveTo(p1.x,p1.y);
-        ctx.lineTo(p2.x,p2.y);
-        ctx.stroke();
+    if(mode3D || view === "top" || view === "bottom") {
+        for(let x = cx - range; x < cx + range; x += gridSize){
+            let p1=project({x:x,y:cy,z:cz-range});
+            let p2=project({x:x,y:cy,z:cz+range});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
+        for(let z = cz - range; z < cz + range; z += gridSize){
+            let p1=project({x:cx-range,y:cy,z:z});
+            let p2=project({x:cx+range,y:cy,z:z});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
+    } else if (view === "front" || view === "back") {
+        for(let x = cx - range; x < cx + range; x += gridSize){
+            let p1=project({x:x,y:cy-range,z:cz});
+            let p2=project({x:x,y:cy+range,z:cz});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
+        for(let y = cy - range; y < cy + range; y += gridSize){
+            let p1=project({x:cx-range,y:y,z:cz});
+            let p2=project({x:cx+range,y:y,z:cz});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
+    } else if (view === "left" || view === "right") {
+        for(let z = cz - range; z < cz + range; z += gridSize){
+            let p1=project({x:cx,y:cy-range,z:z});
+            let p2=project({x:cx,y:cy+range,z:z});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
+        for(let y = cy - range; y < cy + range; y += gridSize){
+            let p1=project({x:cx,y:y,z:cz-range});
+            let p2=project({x:cx,y:y,z:cz+range});
+            ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        }
     }
 }
 
@@ -630,7 +1155,7 @@ function getCompTransform(comp, type){
         return {pos: basePos, rot: rot};
     }
     
-    if(type === "engine" || type === "gearbox" || type === "diff"){
+    if(type === "engine" || type === "gearbox" || type === "diff" || type === "electricMotor" || type === "module" || type === "battery" || type === "hybridBattery" || type === "radiator" || type === "expansionTank" || type === "brakeReservoir" || type === "steeringRack" || type === "steeringWheel" || type === "fuelTank" || type === "light" || type === "seat" || type === "handbrake" || type === "shiftKnob" || type === "speedometer" || type === "hinge"){
         basePos = comp.mount || {x:0,y:0,z:0};
         rot = addRot(rot, comp.rot||{x:0,y:0,z:0});
         return {pos: basePos, rot: rot};
@@ -720,6 +1245,48 @@ function render(){
         }
     }
 
+    // DRAW WINDOWS
+    windows.forEach(w => {
+        if(w.points.length < 3) return;
+        ctx.fillStyle = w.color || "#e0f2fe";
+        ctx.globalAlpha = w.opacity !== undefined ? w.opacity : 0.3;
+        
+        ctx.beginPath();
+        w.points.forEach((pt, i) => {
+            let proj = project(pt);
+            if(i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+        });
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+        
+        // Outline / Shine effect
+        ctx.strokeStyle = (selectedComponent && selectedComponent.data === w) ? "#facc15" : "rgba(255,255,255,0.4)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    });
+
+    // DRAW WINDOW BUFFER
+    if(tool === "window" && windowBuffer.length > 0){
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        windowBuffer.forEach((pt, i) => {
+            let proj = project(pt);
+            if(i === 0) ctx.moveTo(proj.x, proj.y);
+            else ctx.lineTo(proj.x, proj.y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        if(windowBuffer.length >= 3){
+            let p0 = project(windowBuffer[0]);
+            ctx.fillStyle = "#38bdf8";
+            ctx.beginPath(); ctx.arc(p0.x, p0.y, 6, 0, Math.PI*2); ctx.fill();
+        }
+    }
 
     // draw tubes
     tubes.forEach(t=>{
@@ -738,6 +1305,14 @@ function render(){
         ctx.moveTo(a.x,a.y);
         ctx.lineTo(b.x,b.y);
         ctx.stroke();
+
+        if(linkBuffer.includes(t)){
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
     });
 
     function drawHub(pos, rot, data){
@@ -891,6 +1466,14 @@ function render(){
         ctx.beginPath();
         ctx.arc(p.x,p.y,4,0,Math.PI*2);
         ctx.fill();
+
+        if(linkBuffer.includes(n)){
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+            ctx.stroke();
+        }
     });
 
     // DRAW HUBS
@@ -992,6 +1575,63 @@ function render(){
         drawBox(transform.pos, transform.rot, 25, 25, 25, "#1e293b", d);
     });
 
+    function drawElectricMotor(pos, rot, size, data) {
+        let radius = 10, length = 15;
+        let color = "#3b82f6"; // Blueish for electric
+
+        if(size === "small") { radius = 8; length = 12; color = "#60a5fa"; }
+        if(size === "big") { radius = 15; length = 22; color = "#3b82f6"; }
+        if(size === "large") { radius = 22; length = 35; color = "#1d4ed8"; }
+
+        // Draw cylindrical body (as a multi-sided box or actual cylinder approximation)
+        let steps = 8;
+        for(let i=0; i<steps; i++){
+            let a1 = (i/steps) * Math.PI * 2;
+            let a2 = ((i+1)/steps) * Math.PI * 2;
+            
+            let p1 = {x: pos.x + Math.cos(a1)*radius, y: pos.y + Math.sin(a1)*radius, z: pos.z - length/2};
+            let p2 = {x: pos.x + Math.cos(a2)*radius, y: pos.y + Math.sin(a2)*radius, z: pos.z - length/2};
+            let p3 = {x: pos.x + Math.cos(a2)*radius, y: pos.y + Math.sin(a2)*radius, z: pos.z + length/2};
+            let p4 = {x: pos.x + Math.cos(a1)*radius, y: pos.y + Math.sin(a1)*radius, z: pos.z + length/2};
+            
+            let pts = [p1,p2,p3,p4].map(p => projectTransformed(p, pos, rot));
+            
+            ctx.fillStyle = color;
+            ctx.strokeStyle = (selectedComponent && selectedComponent.data === data) ? "#facc15" : "#1e40af";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            pts.forEach(p => ctx.lineTo(p.x, p.y));
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        // End caps
+        [ -length/2, length/2 ].forEach(zOff => {
+            ctx.beginPath();
+            for(let i=0; i<=steps; i++){
+                let a = (i/steps) * Math.PI * 2;
+                let pt = {x: pos.x + Math.cos(a)*radius, y: pos.y + Math.sin(a)*radius, z: pos.z + zOff};
+                let p = projectTransformed(pt, pos, rot);
+                if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        });
+
+        // Mounting wires/connectors
+        let wirePos = {x: pos.x, y: pos.y + radius, z: pos.z};
+        drawBox(wirePos, rot, 4, 4, 8, "#ef4444", data); // Red connector
+    }
+
+    // DRAW ELECTRIC MOTORS
+    electricMotors.forEach(m => {
+        let transform = getCompTransform(m, "electricMotor");
+        drawElectricMotor(transform.pos, transform.rot, m.size, m);
+    });
+
     function drawBox(pos, rot, w, h, d, color, data) {
         let p1 = {x: pos.x-w/2, y: pos.y-h/2, z: pos.z-d/2};
         let p2 = {x: pos.x+w/2, y: pos.y-h/2, z: pos.z-d/2};
@@ -1030,10 +1670,16 @@ function render(){
 mounts.forEach(m=>{
     let p = project(m);
 
-    ctx.fillStyle = "#10b981";
+    ctx.fillStyle = (selectedMount === m || (selectedComponent && selectedComponent.data === m)) ? "#facc15" : "#10b981";
     ctx.beginPath();
     ctx.arc(p.x,p.y,5,0,Math.PI*2);
     ctx.fill();
+    
+    if(selectedMount === m || (selectedComponent && selectedComponent.data === m)){
+        ctx.strokeStyle = "#facc15";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2); ctx.stroke();
+    }
 });
 
 // DRAW A-ARMS
@@ -1125,7 +1771,403 @@ suspensions.forEach(s=>{
     ctx.beginPath(); ctx.arc(pBottom.x, pBottom.y, 8, 0, Math.PI*2); ctx.fill();
 });
 
+// DRAW DRIVESHAFTS
+driveshafts.forEach(ds => {
+    let p1 = getCompTransform(ds.from, ds.fromType).pos;
+    let p2 = getCompTransform(ds.to, ds.toType).pos;
+    
+    let proj1 = project(p1);
+    let proj2 = project(p2);
+    
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === ds) ? "#facc15" : "#94a3b8";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(proj1.x, proj1.y);
+    ctx.lineTo(proj2.x, proj2.y);
+    ctx.stroke();
+    
+    // Joint visuals
+    ctx.fillStyle = "#475569";
+    ctx.beginPath(); ctx.arc(proj1.x, proj1.y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(proj2.x, proj2.y, 5, 0, Math.PI*2); ctx.fill();
+});
 
+// DRAW MODULES
+modules.forEach(m => {
+    let transform = getCompTransform(m, "module");
+    let color = "#1e293b"; // ECU dark
+    if(m.moduleType === "bsm" || m.moduleType === "bsi") color = "#475569";
+    if(m.moduleType === "airbag") color = "#eab308";
+    if(m.moduleType === "fusebox") color = "#64748b";
+    
+    drawBox(transform.pos, transform.rot, 12, 6, 12, color, m);
+    // Label
+    let p = project(transform.pos);
+    ctx.fillStyle = "white"; ctx.font = "8px Arial"; ctx.fillText(m.moduleType.toUpperCase(), p.x-10, p.y-10);
+
+    // Fuse box details
+    if(m.moduleType === "fusebox"){
+        for(let i=0; i<3; i++){
+            let fuseColors = ["#ef4444", "#3b82f6", "#22c55e"];
+            fuseColors.forEach((c, j) => {
+                let fPt = { x: transform.pos.x - 4 + i*4, y: transform.pos.y + 3, z: transform.pos.z - 3 + j*3 };
+                let pFuse = projectTransformed(fPt, transform.pos, transform.rot);
+                ctx.fillStyle = c;
+                ctx.fillRect(pFuse.x-1, pFuse.y-1, 2, 2);
+            });
+        }
+    }
+});
+
+// DRAW BATTERIES
+batteries.forEach(b => {
+    let transform = getCompTransform(b, "battery");
+    drawBox(transform.pos, transform.rot, 15, 12, 20, "#020617", b);
+    // Terminals
+    let p1 = projectTransformed({x:transform.pos.x-4, y:transform.pos.y+6, z:transform.pos.z-6}, transform.pos, transform.rot);
+    let p2 = projectTransformed({x:transform.pos.x+4, y:transform.pos.y+6, z:transform.pos.z-6}, transform.pos, transform.rot);
+    ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(p1.x, p1.y, 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#3b82f6"; ctx.beginPath(); ctx.arc(p2.x, p2.y, 2, 0, Math.PI*2); ctx.fill();
+});
+
+// DRAW HYBRID BATTERIES
+hybridBatteries.forEach(b => {
+    let transform = getCompTransform(b, "hybridBattery");
+    let pos = transform.pos, rot = transform.rot;
+    let w=40, h=8, d=60;
+    drawBox(pos, rot, w, h, d, "#0f172a", b);
+    
+    // Draw cell grid on top
+    for(let i=0; i<4; i++){
+        for(let j=0; j<6; j++){
+            let cPt = { x: pos.x - 15 + i*10, y: pos.y + 4.1, z: pos.z - 25 + j*10 };
+            let p = projectTransformed(cPt, pos, rot);
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillRect(p.x-2, p.y-2, 4, 4);
+        }
+    }
+});
+
+// DRAW HARNESSES
+harnesses.forEach(h => {
+    let baseColor = h.type === "hybrid" ? "#f97316" : "#000000";
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === h) ? "#facc15" : baseColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    h.points.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    // Inner wire detail
+    ctx.strokeStyle = h.type === "hybrid" ? "#fb923c" : "#475569"; ctx.lineWidth = 1; ctx.stroke();
+    // Show points if selected
+    if(selectedComponent && selectedComponent.data === h){
+        ctx.fillStyle = "#facc15";
+        h.points.forEach(pt => { let p = project(pt); ctx.fillRect(p.x-2, p.y-2, 4, 4); });
+    }
+});
+
+// DRAW RADIATORS
+radiators.forEach(rad => {
+    let transform = getCompTransform(rad, "radiator");
+    let pos = transform.pos, rot = transform.rot;
+    let w=30, h=20, d=4;
+    if(rad.radType === "double") { w=30; h=25; d=8; }
+    if(rad.radType === "aux") { w=15; h=15; d=4; }
+    
+    drawBox(pos, rot, w, h, d, "#475569", rad);
+    
+    // Draw radiator mesh
+    ctx.strokeStyle = "#94a3b8"; ctx.lineWidth = 1;
+    for(let i=0; i<4; i++){
+        let xOff = -w/2 + (i+1)*w/5;
+        let p1 = projectTransformed({x:pos.x+xOff, y:pos.y-h/2, z:pos.z}, pos, rot);
+        let p2 = projectTransformed({x:pos.x+xOff, y:pos.y+h/2, z:pos.z}, pos, rot);
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    }
+});
+
+// DRAW EXPANSION TANKS
+expansionTanks.forEach(et => {
+    let transform = getCompTransform(et, "expansionTank");
+    let pos = transform.pos, rot = transform.rot;
+    // Main bottle
+    drawBox(pos, rot, 8, 10, 8, "rgba(248, 250, 252, 0.6)", et);
+    // Cap
+    let capPos = {x: pos.x, y: pos.y + 6, z: pos.z};
+    drawBox(capPos, rot, 4, 2, 4, "#020617", et);
+});
+
+// DRAW COOLANT HOSES
+coolantHoses.forEach(h => {
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === h) ? "#facc15" : "#111827";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    h.points.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    // Hose highlight
+    ctx.strokeStyle = "rgba(255,255,255,0.1)"; ctx.lineWidth = 2; ctx.stroke();
+    // Show points if selected
+    if(selectedComponent && selectedComponent.data === h){
+        ctx.fillStyle = "#facc15";
+        h.points.forEach(pt => { let p = project(pt); ctx.fillRect(p.x-2, p.y-2, 4, 4); });
+    }
+});
+
+// DRAW BRAKE LINES
+brakeLines.forEach(l => {
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === l) ? "#facc15" : "#94a3b8";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    l.points.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    if(selectedComponent && selectedComponent.data === l){
+        ctx.fillStyle = "#facc15";
+        l.points.forEach(pt => { let p = project(pt); ctx.fillRect(p.x-2, p.y-2, 4, 4); });
+    }
+});
+
+// DRAW BRAKE RESERVOIRS
+brakeReservoirs.forEach(br => {
+    let transform = getCompTransform(br, "brakeReservoir");
+    let pos = transform.pos, rot = transform.rot;
+    drawBox(pos, rot, 10, 8, 10, "#334155", br);
+    let resPos = {x: pos.x, y: pos.y + 6, z: pos.z};
+    drawBox(resPos, rot, 8, 4, 8, "rgba(255, 255, 255, 0.4)", br);
+    let cap1 = {x: pos.x-2, y: pos.y + 8, z: pos.z}, cap2 = {x: pos.x+2, y: pos.y + 8, z: pos.z};
+    drawBox(cap1, rot, 3, 1, 3, "#ef4444", br); drawBox(cap2, rot, 3, 1, 3, "#ef4444", br);
+});
+
+// DRAW STEERING RACKS
+steeringRacks.forEach(sr => {
+    let transform = getCompTransform(sr, "steeringRack");
+    drawBox(transform.pos, transform.rot, 60, 4, 4, "#1e293b", sr);
+    // Tie rods
+    let p1 = projectTransformed({x:transform.pos.x-30, y:transform.pos.y, z:transform.pos.z}, transform.pos, transform.rot);
+    let p2 = projectTransformed({x:transform.pos.x+30, y:transform.pos.y, z:transform.pos.z}, transform.pos, transform.rot);
+    ctx.fillStyle = "#64748b"; ctx.beginPath(); ctx.arc(p1.x, p1.y, 3, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p2.x, p2.y, 3, 0, Math.PI*2); ctx.fill();
+});
+
+// DRAW STEERING WHEELS
+steeringWheels.forEach(sw => {
+    let transform = getCompTransform(sw, "steeringWheel");
+    let pos = transform.pos, rot = transform.rot;
+    // Rim
+    ctx.strokeStyle = "#0f172a"; ctx.lineWidth = 4; ctx.beginPath();
+    for(let i=0; i<=20; i++){
+        let a = (i/20)*Math.PI*2;
+        let pt = projectTransformed({x:pos.x + Math.cos(a)*15, y:pos.y + Math.sin(a)*15, z:pos.z}, pos, rot);
+        if(i===0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.stroke();
+    // Spokes
+    [0, 120, 240].forEach(deg => {
+        let a = (deg/180)*Math.PI;
+        let pt = projectTransformed({x:pos.x + Math.cos(a)*15, y:pos.y + Math.sin(a)*15, z:pos.z}, pos, rot);
+        let center = projectTransformed(pos, pos, rot);
+        ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(pt.x, pt.y); ctx.stroke();
+    });
+});
+
+// DRAW SEATS
+seats.forEach(s => {
+    let transform = getCompTransform(s, "seat");
+    let pos = transform.pos, rot = transform.rot;
+    let w=25, h=8, d=25, bw=25, bh=30, bd=6;
+    if(s.seatType === 'bucket'){ w=22; h=6; d=25; bw=22; bh=35; bd=5; }
+    if(s.seatType === 'bench'){ w=50; h=10; d=25; bw=50; bh=25; bd=8; }
+    drawBox(pos, rot, w, h, d, "#1e293b", s);
+    let backPos = {x: pos.x, y: pos.y + h/2 + bh/2, z: pos.z + d/2 - bd/2};
+    let backRot = {x: rot.x + 15, y: rot.y, z: rot.z};
+    drawBox(backPos, backRot, bw, bh, bd, "#1e293b", s);
+});
+
+// DRAW HANDBRAKES
+handbrakes.forEach(hb => {
+    let transform = getCompTransform(hb, "handbrake");
+    let pos = transform.pos, rot = transform.rot;
+    drawBox(pos, rot, 6, 4, 15, "#0f172a", hb);
+    let hPos = {x: pos.x, y: pos.y + 4, z: pos.z - 5};
+    let hRot = {x: rot.x - 30, y: rot.y, z: rot.z};
+    drawBox(hPos, hRot, 3, 3, 12, "#475569", hb);
+});
+
+// DRAW SHIFT KNOBS
+shiftKnobs.forEach(sk => {
+    let transform = getCompTransform(sk, "shiftKnob");
+    let pos = transform.pos, rot = transform.rot;
+    drawBox(pos, rot, 8, 4, 8, "#1e293b", sk);
+    let sPos = {x: pos.x, y: pos.y + 7, z: pos.z};
+    drawBox(sPos, rot, 2, 10, 2, "#94a3b8", sk);
+    let p = projectTransformed({x:pos.x, y:pos.y+12, z:pos.z}, pos, rot);
+    ctx.fillStyle = (selectedComponent && selectedComponent.data === sk) ? "#facc15" : "#ef4444";
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
+});
+
+// DRAW SPEEDOMETERS
+speedometers.forEach(sm => {
+    let transform = getCompTransform(sm, "speedometer");
+    let pos = transform.pos, rot = transform.rot;
+    drawBox(pos, rot, 12, 12, 4, "#1e293b", sm);
+    let facePos = {x: pos.x, y: pos.y, z: pos.z - 2};
+    drawBox(facePos, rot, 10, 10, 1, "#f8fafc", sm);
+    let pCenter = projectTransformed(facePos, pos, rot);
+    let pNeedle = projectTransformed({x: facePos.x + 3, y: facePos.y - 3, z: facePos.z - 1}, pos, rot);
+    ctx.strokeStyle = "#ef4444"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(pCenter.x, pCenter.y); ctx.lineTo(pNeedle.x, pNeedle.y); ctx.stroke();
+});
+
+// DRAW HINGES
+hinges.forEach(h => {
+    let transform = getCompTransform(h, "hinge");
+    let pos = transform.pos, rot = transform.rot;
+    
+    // Draw the mounting bracket
+    drawBox(pos, rot, 6, 2, 8, "#64748b", h);
+    
+    // Draw the pivot cylinder
+    let pivotPos = {x: pos.x, y: pos.y + 2, z: pos.z};
+    drawBox(pivotPos, rot, 8, 4, 4, "#94a3b8", h);
+    
+    // Draw the extending arm depending on hinge type
+    let armColor = (selectedComponent && selectedComponent.data === h) ? "#facc15" : "#334155";
+    if(h.hingeType === 'bonnet' || h.hingeType === 'trunk') {
+        let armPos = {x: pos.x, y: pos.y + 6, z: pos.z + 4};
+        drawBox(armPos, rot, 2, 8, 2, armColor, h);
+    } else {
+        // Door and others
+        let armPos = {x: pos.x + 4, y: pos.y + 2, z: pos.z};
+        drawBox(armPos, rot, 6, 2, 2, armColor, h);
+    }
+});
+
+// DRAW STEERING COLUMNS
+steeringColumns.forEach(sc => {
+    let p1 = project(getCompTransform(sc.from, sc.fromType).pos);
+    let p2 = project(getCompTransform(sc.to, sc.toType).pos);
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === sc) ? "#facc15" : "#475569";
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+});
+
+// DRAW FUEL TANKS
+fuelTanks.forEach(ft => {
+    let transform = getCompTransform(ft, "fuelTank");
+    let pos = transform.pos, rot = transform.rot;
+    let w=30, h=15, d=40;
+    let color = "#475569";
+    if(ft.tankType === "cell") { w=25; h=20; d=25; color="#ef4444"; }
+    if(ft.tankType === "can") { w=10; h=18; d=15; color="#b91c1c"; }
+    
+    drawBox(pos, rot, w, h, d, color, ft);
+    // Filler Cap
+    let capPos = {x: pos.x, y: pos.y + h/2 + 1, z: pos.z};
+    drawBox(capPos, rot, 6, 2, 6, "#020617", ft);
+});
+
+// DRAW FUEL LINES
+fuelLines.forEach(l => {
+    ctx.strokeStyle = (selectedComponent && selectedComponent.data === l) ? "#facc15" : "#fcd34d";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    l.points.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+    if(selectedComponent && selectedComponent.data === l){
+        ctx.fillStyle = "#facc15";
+        l.points.forEach(pt => { let p = project(pt); ctx.fillRect(p.x-2, p.y-2, 4, 4); });
+    }
+});
+
+// DRAW FUEL LINE BUFFER
+if(tool === "fuelLine" && fuelLineBuffer.length > 0){
+    ctx.strokeStyle = "#fbbf24"; ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    fuelLineBuffer.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+}
+
+// DRAW HOSE BUFFER
+if(tool === "coolantHose" && hoseBuffer.length > 0){
+    ctx.strokeStyle = "#4ade80"; ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    hoseBuffer.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+}
+
+// DRAW HARNESS BUFFER
+if((tool === "harness" || tool === "hybridHarness") && harnessBuffer.length > 0){
+    ctx.strokeStyle = tool === "hybridHarness" ? "#fb923c" : "#6366f1"; ctx.setLineDash([2, 2]);
+    ctx.beginPath();
+    harnessBuffer.forEach((pt, i) => {
+        let p = project(pt);
+        if(i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+}
+
+
+
+    // DRAW LIGHTS
+    lights.forEach(l => {
+        let transform = getCompTransform(l, "light");
+        drawLight(transform.pos, transform.rot, l.type, l);
+    });
+
+    function drawLight(pos, rot, type, data) {
+        let w=10, h=10, d=8;
+        let color = "#ffffff";
+        let isSelected = (selectedComponent && selectedComponent.data === data);
+        
+        if(type === "headlight"){
+            w=12; h=10; d=10; color="#fef08a";
+        } else if(type === "tailLight"){
+            w=12; h=8; d=4; color="#ef4444";
+        } else if(type === "fogLight"){
+            w=8; h=8; d=6; color="#fbbf24";
+        }
+
+        drawBox(pos, rot, w, h, d, color, data);
+        
+        let p = project(pos);
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, isSelected ? 15 : 10, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+    }
+
+    // DRAW LINK HIGHLIGHTS for components
+    linkBuffer.forEach(item => {
+        let pos = item.mount || item.center || (item.x !== undefined ? item : null);
+        if(pos && !nodes.includes(item)){ 
+            let p = project(pos);
+            ctx.strokeStyle = "#facc15";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 15, 0, Math.PI*2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    });
 }
 
 function getMouse(e){
@@ -1139,11 +2181,9 @@ canvas.addEventListener("mousedown",e=>{
 
     let w=toWorld(m);
 
-    canvas.addEventListener("mousedown",e=>{
     if(mode3D && e.button === 2){
         isRotating = true;
     }
-});
 
 canvas.addEventListener("mousemove",e=>{
     if(isRotating){
@@ -1167,14 +2207,46 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
         }
     }
 
+    // detect mount
+    selectedMount=null;
+    for(let mt of mounts){
+        let p=project(mt);
+        if(Math.hypot(p.x-m.x,p.y-m.y)<10){
+            selectedMount=mt;
+        }
+    }
+
+    if(e.button === 1 || (e.button === 2 && e.shiftKey)){
+        let target = selectedNode || selectedMount;
+        if(!target) {
+            // Check other components for camera focus
+            [...wheels, ...engines, ...gearboxes, ...differentials, ...electricMotors, ...axles, ...suspensions, ...hubs, ...aArms].forEach(comp => {
+                let pos = comp.mount || comp.center || comp.hub || (comp.x !== undefined ? comp : null);
+                if(pos){
+                    let p = project(pos);
+                    if(Math.hypot(p.x-m.x, p.y-m.y) < 20) target = pos;
+                }
+            });
+        }
+        if(target) {
+            camTarget = {x: target.x, y: target.y, z: target.z};
+        } else {
+            camTarget = {x: w.x, y: w.y, z: w.z};
+        }
+        render();
+        return;
+    }
+
     if(tool==="draw"){
         drawing=true;
         startNode=findNearbyNode(w)||createNode(w.x,w.y,w.z);
     }
 
-    if(tool==="point" && selectedNode){
+    if(tool==="point" && (selectedNode || selectedMount)){
         dragging=true;
         lastMouse=m;
+        if(selectedMount) selectedComponent = { type: 'mount', data: selectedMount };
+        updateInspector();
     }
 
     if(tool==="move"){
@@ -1254,8 +2326,64 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
         engines = engines.filter(e => Math.hypot(project(e.mount).x-m.x, project(e.mount).y-m.y) > 20);
         gearboxes = gearboxes.filter(g => Math.hypot(project(g.mount).x-m.x, project(g.mount).y-m.y) > 15);
         differentials = differentials.filter(d => Math.hypot(project(d.mount).x-m.x, project(d.mount).y-m.y) > 15);
+        electricMotors = electricMotors.filter(em => Math.hypot(project(em.mount).x-m.x, project(em.mount).y-m.y) > 20);
         aArms = aArms.filter(a => Math.hypot(project(a.hub).x-m.x, project(a.hub).y-m.y) > 15);
         panels = panels.filter(p => Math.hypot(project(p.points[0]).x-m.x, project(p.points[0]).y-m.y) > 20);
+        windows = windows.filter(w => Math.hypot(project(w.points[0]).x-m.x, project(w.points[0]).y-m.y) > 20);
+        driveshafts = driveshafts.filter(ds => {
+            let p1 = project(getCompTransform(ds.from, ds.fromType).pos);
+            let p2 = project(getCompTransform(ds.to, ds.toType).pos);
+            return dist(m, p1, p2) > 10;
+        });
+        harnesses = harnesses.filter(h => {
+            for(let i=0; i<h.points.length-1; i++){
+                let p1 = project(h.points[i]);
+                let p2 = project(h.points[i+1]);
+                if(dist(m, p1, p2) < 8) return false;
+            }
+            return true;
+        });
+        modules = modules.filter(mo => Math.hypot(project(mo.mount).x-m.x, project(mo.mount).y-m.y) > 15);
+        batteries = batteries.filter(b => Math.hypot(project(b.mount).x-m.x, project(b.mount).y-m.y) > 20);
+        hybridBatteries = hybridBatteries.filter(hb => Math.hypot(project(hb.mount).x-m.x, project(hb.mount).y-m.y) > 30);
+        radiators = radiators.filter(rad => Math.hypot(project(rad.mount).x-m.x, project(rad.mount).y-m.y) > 20);
+        expansionTanks = expansionTanks.filter(et => Math.hypot(project(et.mount).x-m.x, project(et.mount).y-m.y) > 15);
+        coolantHoses = coolantHoses.filter(h => {
+            for(let i=0; i<h.points.length-1; i++){
+                let p1 = project(h.points[i]), p2 = project(h.points[i+1]);
+                if(dist(m, p1, p2) < 10) return false;
+            }
+            return true;
+        });
+        brakeLines = brakeLines.filter(l => {
+            for(let i=0; i<l.points.length-1; i++){
+                let p1 = project(l.points[i]), p2 = project(l.points[i+1]);
+                if(dist(m, p1, p2) < 8) return false;
+            }
+            return true;
+        });
+        brakeReservoirs = brakeReservoirs.filter(br => Math.hypot(project(br.mount).x-m.x, project(br.mount).y-m.y) > 15);
+        steeringRacks = steeringRacks.filter(sr => Math.hypot(project(sr.mount).x-m.x, project(sr.mount).y-m.y) > 20);
+        steeringWheels = steeringWheels.filter(sw => Math.hypot(project(sw.mount).x-m.x, project(sw.mount).y-m.y) > 15);
+        seats = seats.filter(st => Math.hypot(project(st.mount).x-m.x, project(st.mount).y-m.y) > 20);
+        handbrakes = handbrakes.filter(hb => Math.hypot(project(hb.mount).x-m.x, project(hb.mount).y-m.y) > 10);
+        shiftKnobs = shiftKnobs.filter(sk => Math.hypot(project(sk.mount).x-m.x, project(sk.mount).y-m.y) > 10);
+        speedometers = speedometers.filter(sm => Math.hypot(project(sm.mount).x-m.x, project(sm.mount).y-m.y) > 10);
+        hinges = hinges.filter(h => Math.hypot(project(h.mount).x-m.x, project(h.mount).y-m.y) > 10);
+        steeringColumns = steeringColumns.filter(sc => {
+            let p1 = project(getCompTransform(sc.from, sc.fromType).pos);
+            let p2 = project(getCompTransform(sc.to, sc.toType).pos);
+            return dist(m, p1, p2) > 10;
+        });
+        fuelLines = fuelLines.filter(l => {
+            for(let i=0; i<l.points.length-1; i++){
+                let p1 = project(l.points[i]), p2 = project(l.points[i+1]);
+                if(dist(m, p1, p2) < 8) return false;
+            }
+            return true;
+        });
+        fuelTanks = fuelTanks.filter(ft => Math.hypot(project(ft.mount).x-m.x, project(ft.mount).y-m.y) > 20);
+        lights = lights.filter(l => Math.hypot(project(l.mount).x-m.x, project(l.mount).y-m.y) > 15);
 
         // Nodes - only if not connected to anything
         nodes = nodes.filter(n => {
@@ -1266,6 +2394,8 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
             }
             return true;
         });
+        
+        cleanLinks();
     }
 
     if(tool === "cut"){
@@ -1325,6 +2455,12 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
             if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'differential', data: d };
         });
 
+        // Check electric motors
+        electricMotors.forEach(em => {
+            let p = project(em.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'electricMotor', data: em };
+        });
+
         // Check axles
         axles.forEach(axle => {
             let p = project(axle.center);
@@ -1337,13 +2473,163 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
             if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'aarm', data: a };
         });
 
-        // Check Panels
+        // Check Panels and Windows
         panels.forEach(p => {
             let pt = project(p.points[0]);
             if(Math.hypot(pt.x-m.x, pt.y-m.y) < 20) selectedComponent = { type: 'panel', data: p };
         });
+        windows.forEach(w => {
+            let pt = project(w.points[0]);
+            if(Math.hypot(pt.x-m.x, pt.y-m.y) < 20) selectedComponent = { type: 'window', data: w };
+        });
+
+        // Check Driveshafts
+        driveshafts.forEach(ds => {
+            let p1 = project(getCompTransform(ds.from, ds.fromType).pos);
+            let p2 = project(getCompTransform(ds.to, ds.toType).pos);
+            if(dist(m, p1, p2) < 10) selectedComponent = { type: 'driveshaft', data: ds };
+        });
+
+        // Check Harnesses
+        harnesses.forEach(h => {
+            for(let i=0; i<h.points.length-1; i++){
+                let p1 = project(h.points[i]);
+                let p2 = project(h.points[i+1]);
+                if(dist(m, p1, p2) < 8) selectedComponent = { type: 'harness', data: h };
+            }
+        });
+
+        // Check modules
+        modules.forEach(mo => {
+            let p = project(mo.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'module', data: mo };
+        });
+        // Check batteries
+        batteries.forEach(b => {
+            let p = project(b.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'battery', data: b };
+        });
+        // Check hybrid batteries
+        hybridBatteries.forEach(hb => {
+            let p = project(hb.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 30) selectedComponent = { type: 'hybridBattery', data: hb };
+        });
+
+        // Check radiators
+        radiators.forEach(rad => {
+            let p = project(rad.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'radiator', data: rad };
+        });
+        // Check expansion tanks
+        expansionTanks.forEach(et => {
+            let p = project(et.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'expansionTank', data: et };
+        });
+
+        // Check Coolant Hoses
+        coolantHoses.forEach(h => {
+            for(let i=0; i<h.points.length-1; i++){
+                let p1 = project(h.points[i]), p2 = project(h.points[i+1]);
+                if(dist(m, p1, p2) < 10) selectedComponent = { type: 'coolantHose', data: h };
+            }
+        });
         
+        // Check Brake Lines
+        brakeLines.forEach(l => {
+            for(let i=0; i<l.points.length-1; i++){
+                let p1 = project(l.points[i]), p2 = project(l.points[i+1]);
+                if(dist(m, p1, p2) < 8) selectedComponent = { type: 'brakeLine', data: l };
+            }
+        });
+        
+        // Check Brake Reservoirs
+        brakeReservoirs.forEach(br => {
+            let p = project(br.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'brakeReservoir', data: br };
+        });
+
+        // Check Steering
+        steeringRacks.forEach(sr => {
+            let p = project(sr.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'steeringRack', data: sr };
+        });
+        steeringWheels.forEach(sw => {
+            let p = project(sw.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 15) selectedComponent = { type: 'steeringWheel', data: sw };
+        });
+        seats.forEach(st => {
+            let p = project(st.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'seat', data: st };
+        });
+        handbrakes.forEach(hb => {
+            let p = project(hb.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'handbrake', data: hb };
+        });
+        shiftKnobs.forEach(sk => {
+            let p = project(sk.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'shiftKnob', data: sk };
+        });
+        speedometers.forEach(sm => {
+            let p = project(sm.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'speedometer', data: sm };
+        });
+        hinges.forEach(h => {
+            let p = project(h.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'hinge', data: h };
+        });
+        steeringColumns.forEach(sc => {
+            let p1 = project(getCompTransform(sc.from, sc.fromType).pos);
+            let p2 = project(getCompTransform(sc.to, sc.toType).pos);
+            if(dist(m, p1, p2) < 10) selectedComponent = { type: 'steeringColumn', data: sc };
+        });
+
+        // Check Fuel
+        fuelLines.forEach(l => {
+            for(let i=0; i<l.points.length-1; i++){
+                let p1 = project(l.points[i]), p2 = project(l.points[i+1]);
+                if(dist(m, p1, p2) < 8) selectedComponent = { type: 'fuelLine', data: l };
+            }
+        });
+        fuelTanks.forEach(ft => {
+            let p = project(ft.mount);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 20) selectedComponent = { type: 'fuelTank', data: ft };
+        });
+        
+        // Check mounts
+        mounts.forEach(mt => {
+            let p = project(mt);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 10) selectedComponent = { type: 'mount', data: mt };
+        });
+
         updateInspector();
+    }
+
+    if(tool === "link"){
+        let clicked = null;
+        for(let n of nodes){
+            let p = project(n);
+            if(Math.hypot(p.x-m.x, p.y-m.y) < 8){ clicked = n; break; }
+        }
+        if(!clicked){
+            for(let t of tubes){
+                let a = project(t.a), b = project(t.b);
+                if(dist(m, a, b) < 6){ clicked = t; break; }
+            }
+        }
+        if(!clicked){
+            [...wheels, ...engines, ...gearboxes, ...differentials, ...electricMotors, ...axles, ...suspensions, ...hubs, ...mounts, ...hinges].forEach(comp => {
+                let pos = comp.mount || comp.center || (comp.x !== undefined ? comp : null);
+                if(pos){
+                    let p = project(pos);
+                    if(Math.hypot(p.x-m.x, p.y-m.y) < 20) clicked = comp;
+                }
+            });
+        }
+        if(clicked){
+            if(linkBuffer.includes(clicked)) linkBuffer = linkBuffer.filter(item => item !== clicked);
+            else linkBuffer.push(clicked);
+            render();
+        }
     }
 
     // VEHICLE ASSEMBLY
@@ -1468,6 +2754,16 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
             });
         }
     }
+    if(tool === "electricMotor"){
+        let nearest = findNearestMount(w, 30);
+        if(nearest && !electricMotors.some(em => em.mount === nearest)){
+            electricMotors.push({ 
+                mount: nearest, 
+                rot: {x:0,y:0,z:0},
+                size: 'big'
+            });
+        }
+    }
     if(tool === "diff"){
         let nearest = findNearestMount(w, 25);
         if(nearest && !differentials.some(d => d.mount === nearest)) differentials.push({ mount: nearest, rot: {x:0,y:0,z:0} });
@@ -1526,8 +2822,6 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
     if(tool === "panel"){
         let nearest = null;
         let minDist = 20;
-
-        // Check mounts and nodes
         mounts.forEach(mt => {
             let d = Math.hypot(project(mt).x - m.x, project(mt).y - m.y);
             if(d < minDist){ nearest = mt; minDist = d; }
@@ -1536,23 +2830,284 @@ canvas.addEventListener("contextmenu",e=>e.preventDefault());
             let d = Math.hypot(project(n).x - m.x, project(n).y - m.y);
             if(d < minDist){ nearest = n; minDist = d; }
         });
-
-        // If clicking empty space, create a node
-        if(!nearest){
-            nearest = createNode(w.x, w.y, w.z);
-        }
-
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
         if(nearest){
             if(panelBuffer.length >= 3 && nearest === panelBuffer[0]){
-                panels.push({
-                    points: [...panelBuffer],
-                    color: '#3b82f6',
-                    opacity: 0.5
-                });
+                panels.push({ points: [...panelBuffer], color: '#3b82f6', opacity: 0.5 });
                 panelBuffer = [];
             } else if (!panelBuffer.includes(nearest)) {
                 panelBuffer.push(nearest);
             }
+        }
+    }
+
+    if(tool === "window"){
+        let nearest = null;
+        let minDist = 20;
+        mounts.forEach(mt => {
+            let d = Math.hypot(project(mt).x - m.x, project(mt).y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let d = Math.hypot(project(n).x - m.x, project(n).y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
+        if(nearest){
+            if(windowBuffer.length >= 3 && nearest === windowBuffer[0]){
+                windows.push({ points: [...windowBuffer], color: '#e0f2fe', opacity: 0.3 });
+                windowBuffer = [];
+            } else if (!windowBuffer.includes(nearest)) {
+                windowBuffer.push(nearest);
+            }
+        }
+    }
+
+    if(tool === "module"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) modules.push({ mount: nearest, rot: {x:0,y:0,z:0}, moduleType: 'ecu' });
+    }
+    if(tool === "battery"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) batteries.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "hybridBattery"){
+        let nearest = findNearestMount(w, 30);
+        if(nearest) hybridBatteries.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "radiator"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) radiators.push({ mount: nearest, rot: {x:0,y:0,z:0}, radType: 'front' });
+    }
+    if(tool === "expansionTank"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) expansionTanks.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "brakeReservoir"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) brakeReservoirs.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "brakeLine"){
+        let nearest = null;
+        let minDist = 20;
+        
+        // Find nearest point including pads and master cylinders
+        mounts.forEach(mt => {
+            let p = project(mt);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let p = project(n);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+        // Check pads directly
+        pads.forEach(pad => {
+            let p = project(pad.mount);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = pad.mount; minDist = d; }
+        });
+        // Check master cylinders
+        brakeReservoirs.forEach(br => {
+            let p = project(br.mount);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = br.mount; minDist = d; }
+        });
+
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
+        if(nearest){
+            if(brakeLineBuffer.length > 0 && nearest === brakeLineBuffer[0]){
+                brakeLines.push({ points: [...brakeLineBuffer] });
+                brakeLineBuffer = [];
+            } else {
+                brakeLineBuffer.push(nearest);
+            }
+        }
+    }
+    if(tool === "steeringRack"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) steeringRacks.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "steeringWheel"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) steeringWheels.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "seat"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) seats.push({ mount: nearest, rot: {x:0,y:0,z:0}, seatType: 'bucket' });
+    }
+    if(tool === "handbrake"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) handbrakes.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "shiftKnob"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) shiftKnobs.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "speedometer"){
+        let nearest = findNearestMount(w, 15);
+        if(nearest) speedometers.push({ mount: nearest, rot: {x:0,y:0,z:0} });
+    }
+    if(tool === "hinge"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) hinges.push({ mount: nearest, rot: {x:0,y:0,z:0}, hingeType: 'door' });
+    }
+    if(tool === "steeringColumn"){
+        let nearest = null;
+        let minDist = 20;
+        steeringRacks.forEach(sr => {
+            let p = project(sr.mount);
+            let d = Math.hypot(p.x-m.x, p.y-m.y);
+            if(d < minDist){ nearest = {comp: sr, type: 'steeringRack'}; minDist = d; }
+        });
+        steeringWheels.forEach(sw => {
+            let p = project(sw.mount);
+            let d = Math.hypot(p.x-m.x, p.y-m.y);
+            if(d < minDist){ nearest = {comp: sw, type: 'steeringWheel'}; minDist = d; }
+        });
+        if(nearest){
+            steeringBuffer.push(nearest);
+            if(steeringBuffer.length === 2){
+                steeringColumns.push({
+                    from: steeringBuffer[0].comp, fromType: steeringBuffer[0].type,
+                    to: steeringBuffer[1].comp, toType: steeringBuffer[1].type
+                });
+                steeringBuffer = [];
+            }
+        }
+    }
+    if(tool === "fuelTank"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) fuelTanks.push({ mount: nearest, rot: {x:0,y:0,z:0}, tankType: 'std' });
+    }
+    if(tool === "fuelLine"){
+        let nearest = null;
+        let minDist = 20;
+        mounts.forEach(mt => {
+            let p = project(mt);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let p = project(n);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+        // Snap to fuel tanks
+        fuelTanks.forEach(ft => {
+            let p = project(ft.mount);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = ft.mount; minDist = d; }
+        });
+        // Snap to engines
+        engines.forEach(eng => {
+            let p = project(eng.mount);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = eng.mount; minDist = d; }
+        });
+
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
+        if(nearest){
+            if(fuelLineBuffer.length > 0 && nearest === fuelLineBuffer[0]){
+                fuelLines.push({ points: [...fuelLineBuffer] });
+                fuelLineBuffer = [];
+            } else {
+                fuelLineBuffer.push(nearest);
+            }
+        }
+    }
+    if(tool === "coolantHose"){
+        let nearest = null;
+        let minDist = 20;
+        mounts.forEach(mt => {
+            let d = Math.hypot(project(mt).x - m.x, project(mt).y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let d = Math.hypot(project(n).x - m.x, project(n).y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
+        if(nearest){
+            if(hoseBuffer.length > 0 && nearest === hoseBuffer[0]){
+                coolantHoses.push({ points: [...hoseBuffer] });
+                hoseBuffer = [];
+            } else {
+                hoseBuffer.push(nearest);
+            }
+        }
+    }
+    if(tool === "fusebox"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest) modules.push({ mount: nearest, rot: {x:0,y:0,z:0}, moduleType: 'fusebox' });
+    }
+    if(tool === "harness" || tool === "hybridHarness"){
+        let nearest = null;
+        let minDist = 20;
+        mounts.forEach(mt => {
+            let d = Math.hypot(project(mt).x - m.x, project(mt).y - m.y);
+            if(d < minDist){ nearest = mt; minDist = d; }
+        });
+        nodes.forEach(n => {
+            let d = Math.hypot(project(n).x - m.x, project(n).y - m.y);
+            if(d < minDist){ nearest = n; minDist = d; }
+        });
+        // Snap to lights
+        lights.forEach(l => {
+            let p = project(l.mount);
+            let d = Math.hypot(p.x - m.x, p.y - m.y);
+            if(d < minDist){ nearest = l.mount; minDist = d; }
+        });
+        if(!nearest) nearest = createNode(w.x, w.y, w.z);
+        if(nearest){
+            if(harnessBuffer.length > 0 && nearest === harnessBuffer[0]){
+                harnesses.push({ points: [...harnessBuffer], type: tool === "hybridHarness" ? "hybrid" : "std" });
+                harnessBuffer = [];
+            } else {
+                harnessBuffer.push(nearest);
+            }
+        }
+    }
+
+    if(tool === "driveshaft"){
+        let nearest = null;
+        let minDist = 30;
+
+        hubs.forEach(h => {
+            let mt = h.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){ nearest = {data: h, type: 'hub'}; minDist = d; }
+        });
+        gearboxes.forEach(g => {
+            let mt = g.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){ nearest = {data: g, type: 'gearbox'}; minDist = d; }
+        });
+        differentials.forEach(df => {
+            let mt = df.mount;
+            let d = Math.hypot(mt.x-w.x, mt.y-w.y, mt.z-w.z);
+            if(d < minDist){ nearest = {data: df, type: 'diff'}; minDist = d; }
+        });
+
+        if(nearest){
+            driveshaftBuffer.push(nearest);
+            if(driveshaftBuffer.length === 2){
+                driveshafts.push({
+                    from: driveshaftBuffer[0].data,
+                    fromType: driveshaftBuffer[0].type,
+                    to: driveshaftBuffer[1].data,
+                    toType: driveshaftBuffer[1].type
+                });
+                driveshaftBuffer = [];
+            }
+        }
+    }
+
+    if(tool === "headlight" || tool === "tailLight" || tool === "fogLight"){
+        let nearest = findNearestMount(w, 20);
+        if(nearest){
+            lights.push({ mount: nearest, rot: {x:0,y:0,z:0}, type: tool });
         }
     }
 });
@@ -1592,7 +3147,10 @@ function calculateMaterials(){
     console.log("Wheels:", wheels.length);
     console.log("Suspension Points:", suspensions.length);
     console.log("Axles:", axles.length);
-    console.log("Panels:", panels.length);
+    console.log("- Differentials:", differentials.length);
+    console.log("- Panels:", panels.length);
+    console.log("- Windows:", windows.length);
+    console.log("- Hinges:", hinges.length);
 
     alert(
         "Total Tube Length: " + Math.round(totalLength) + "mm\n" +
@@ -1610,7 +3168,9 @@ function calculateMaterials(){
         "- Engines: " + engines.length + "\n" +
         "- Gearboxes: " + gearboxes.length + "\n" +
         "- Differentials: " + differentials.length + "\n" +
-        "- Panels: " + panels.length
+        "- Panels: " + panels.length + "\n" +
+        "- Windows: " + windows.length + "\n" +
+        "- Hinges: " + hinges.length
     );
 }
 
@@ -1625,21 +3185,25 @@ canvas.addEventListener("mousemove",e=>{
 
     let w=toWorld(m);
 
-    if(tool==="point" && dragging && selectedNode){
-        selectedNode.x=w.x;
-        selectedNode.y=w.y;
-        selectedNode.z=w.z;
+    if(tool==="point" && dragging){
+        let target = selectedNode || selectedMount;
+        if(target){
+            let deltaX = w.x - target.x;
+            let deltaY = w.y - target.y;
+            let deltaZ = w.z - target.z;
+            moveSelected(deltaX, deltaY, deltaZ);
+        }
+        updateInspector();
     }
 
     if(tool==="move" && dragging && selectedTube){
-        let dx=e.movementX;
-        let dy=e.movementY;
-
-        selectedTube.a.x+=dx;
-        selectedTube.a.z+=dy;
-
-        selectedTube.b.x+=dx;
-        selectedTube.b.z+=dy;
+        let prevW = toWorld(lastMouse);
+        let dx = w.x - prevW.x;
+        let dy = w.y - prevW.y;
+        let dz = w.z - prevW.z;
+        
+        moveSelected(dx, dy, dz);
+        lastMouse = m;
     }
 });
 
@@ -1664,6 +3228,16 @@ canvas.addEventListener("mouseup",e=>{
     panning=false;
 });
 
+canvas.addEventListener("wheel", e => {
+    e.preventDefault();
+    if(e.deltaY < 0){
+        camZoom *= 1.1;
+    } else {
+        camZoom /= 1.1;
+    }
+    render();
+}, {passive: false});
+
 // (Code moved to main mousedown listener)
 
 window.addEventListener("keydown",e=>{
@@ -1671,22 +3245,76 @@ window.addEventListener("keydown",e=>{
         tubes=tubes.filter(t=>t!==selectedTube);
         selectedTube=null;
     }
+    if(e.key === "Enter"){
+        if(tool === "link" && linkBuffer.length > 1){
+            createLink();
+        }
+        if(panelBuffer.length >= 3){
+            panels.push({ points: [...panelBuffer], color: '#3b82f6', opacity: 0.5 });
+            panelBuffer = [];
+        }
+        if(windowBuffer.length >= 3){
+            windows.push({ points: [...windowBuffer], color: '#e0f2fe', opacity: 0.3 });
+            windowBuffer = [];
+        }
+        if(harnessBuffer.length >= 2){
+            harnesses.push({ points: [...harnessBuffer], type: tool === "hybridHarness" ? "hybrid" : "std" });
+            harnessBuffer = [];
+        }
+        if(hoseBuffer.length >= 2){
+            coolantHoses.push({ points: [...hoseBuffer] });
+            hoseBuffer = [];
+        }
+        if(brakeLineBuffer.length >= 2){
+            brakeLines.push({ points: [...brakeLineBuffer] });
+            brakeLineBuffer = [];
+        }
+        if(fuelLineBuffer.length >= 2){
+            fuelLines.push({ points: [...fuelLineBuffer] });
+            fuelLineBuffer = [];
+        }
+    }
 });
 
 window.addEventListener("keydown", e => {
-    let a = axles[axles.length - 1];
-    if(!a) return;
+    // Movement System
+    let step = e.shiftKey ? 5 : 25;
+    let dx = 0, dy = 0, dz = 0;
 
-    // steering (yaw)
-    if(e.key === "ArrowLeft") a.yaw -= 0.05;
-    if(e.key === "ArrowRight") a.yaw += 0.05;
+    if (e.key === "ArrowUp") {
+        if (view === "top") dz = -step;
+        else if (view === "front" || view === "right" || view === "left" || view === "back") dy = step;
+    }
+    if (e.key === "ArrowDown") {
+        if (view === "top") dz = step;
+        else if (view === "front" || view === "right" || view === "left" || view === "back") dy = -step;
+    }
+    if (e.key === "ArrowLeft") {
+        if (view === "top" || view === "front" || view === "back") dx = -step;
+        else if (view === "right" || view === "left") dz = step;
+    }
+    if (e.key === "ArrowRight") {
+        if (view === "top" || view === "front" || view === "back") dx = step;
+        else if (view === "right" || view === "left") dz = -step;
+    }
+    if (e.key === "PageUp") dy = step;
+    if (e.key === "PageDown") dy = -step;
 
-    // camber tilt
-    if(e.key === "ArrowUp") a.camber += 0.05;
-    if(e.key === "ArrowDown") a.camber -= 0.05;
+    if (dx || dy || dz) {
+        moveSelected(dx, dy, dz);
+        updateInspector();
+        e.preventDefault();
+    }
 
-    // toggle front steering axle
-    if(e.key === "s") a.steer = !a.steer;
+    // Steering & Camber (Only if axle selected)
+    if (selectedComponent && selectedComponent.type === 'axle') {
+        let a = selectedComponent.data;
+        if(e.key === "w") a.camber = (a.camber || 0) + 0.05;
+        if(e.key === "s") a.camber = (a.camber || 0) - 0.05;
+        if(e.key === "a") a.yaw = (a.yaw || 0) - 0.05;
+        if(e.key === "d") a.yaw = (a.yaw || 0) + 0.05;
+        render();
+    }
 });
 
 function dist(p,a,b){
@@ -1713,90 +3341,197 @@ document.addEventListener('DOMContentLoaded', () => {
     setMaterial('steel', steelBtn);
 });
 
-function saveProject() {
+function showSaveModal(){
+    document.getElementById('saveModal').style.display = 'flex';
+}
+function closeSaveModal(){
+    document.getElementById('saveModal').style.display = 'none';
+}
+function confirmSave(){
+    let name = document.getElementById('saveName').value || "Chassis";
+    let format = document.getElementById('saveFormat').value;
+    saveProject(format, name);
+    closeSaveModal();
+}
+
+function saveProject(format = "json", fileName = "Chassis") {
     let idCounter = 1;
     let assignId = (obj) => { if(obj && !obj._id) obj._id = idCounter++; };
     
     nodes.forEach(assignId);
     mounts.forEach(assignId);
     
-    let data = {
-        nodes: nodes.map(n => ({...n})),
-        mounts: mounts.map(m => ({...m})),
-        tubes: tubes.map(t => ({...t, a: t.a._id, b: t.b._id})),
-        suspensions: suspensions.map(s => ({...s, p1: s.p1._id, p2: s.p2._id})),
-        hubs: hubs.map(h => ({...h, mount: h.mount._id, suspension: h.suspension ? suspensions.indexOf(h.suspension) : null})),
-        rotors: rotors.map(r => ({...r, hub: hubs.indexOf(r.hub)})),
-        pads: pads.map(p => ({...p, rotor: rotors.indexOf(p.rotor)})),
-        wheels: wheels.map(w => ({...w, rotor: w.rotor ? rotors.indexOf(w.rotor) : null, mount: w.mount ? w.mount._id : null})),
-        engines: engines.map(e => ({...e, mount: e.mount._id})),
-        gearboxes: gearboxes.map(g => ({...g, mount: g.mount._id})),
-        differentials: differentials.map(d => ({...d, mount: d.mount._id})),
-        aArms: aArms.map(a => ({...a, p1: a.p1._id, p2: a.p2._id, hub: a.hub._id})),
-        panels: panels.map(p => ({...p, points: p.points.map(pt => pt._id)})),
-        axles: axles.map(a => ({...a, center: a.center._id, mounts: a.mounts ? a.mounts.map(m => m._id) : null}))
-    };
+    if(format === "json"){
+        let data = {
+            nodes: nodes.map(n => ({...n})),
+            mounts: mounts.map(m => ({...m})),
+            tubes: tubes.map(t => ({...t, a: t.a._id, b: t.b._id})),
+            suspensions: suspensions.map(s => ({...s, p1: s.p1._id, p2: s.p2._id})),
+            hubs: hubs.map(h => ({...h, mount: h.mount._id, suspension: h.suspension ? suspensions.indexOf(h.suspension) : null})),
+            rotors: rotors.map(r => ({...r, hub: hubs.indexOf(r.hub)})),
+            pads: pads.map(p => ({...p, rotor: rotors.indexOf(p.rotor)})),
+            wheels: wheels.map(w => ({...w, rotor: w.rotor ? rotors.indexOf(w.rotor) : null, mount: w.mount ? w.mount._id : null})),
+            engines: engines.map(e => ({...e, mount: e.mount._id})),
+            gearboxes: gearboxes.map(g => ({...g, mount: g.mount._id})),
+            differentials: differentials.map(d => ({...d, mount: d.mount._id})),
+            electricMotors: electricMotors.map(em => ({...em, mount: em.mount._id})),
+            modules: modules.map(m => ({...m, mount: m.mount._id})),
+            batteries: batteries.map(b => ({...b, mount: b.mount._id})),
+            hybridBatteries: hybridBatteries.map(hb => ({...hb, mount: hb.mount._id})),
+            radiators: radiators.map(rad => ({...rad, mount: rad.mount._id})),
+            expansionTanks: expansionTanks.map(et => ({...et, mount: et.mount._id})),
+            coolantHoses: coolantHoses.map(h => ({ points: h.points.map(p => p._id) })),
+            brakeReservoirs: brakeReservoirs.map(br => ({...br, mount: br.mount._id})),
+            brakeLines: brakeLines.map(l => ({ points: l.points.map(p => p._id) })),
+            steeringRacks: steeringRacks.map(sr => ({...sr, mount: sr.mount._id})),
+            steeringWheels: steeringWheels.map(sw => ({...sw, mount: sw.mount._id})),
+            seats: seats.map(s => ({...s, mount: s.mount._id})),
+            handbrakes: handbrakes.map(hb => ({...hb, mount: hb.mount._id})),
+            shiftKnobs: shiftKnobs.map(sk => ({...sk, mount: sk.mount._id})),
+            speedometers: speedometers.map(sm => ({...sm, mount: sm.mount._id})),
+            hinges: hinges.map(h => ({...h, mount: h.mount._id})),
+            steeringColumns: steeringColumns.map(sc => ({
+                from: sc.from._id || sc.from.mount._id, fromType: sc.fromType,
+                to: sc.to._id || sc.to.mount._id, toType: sc.toType
+            })),
+            fuelTanks: fuelTanks.map(ft => ({...ft, mount: ft.mount._id})),
+            fuelLines: fuelLines.map(l => ({ points: l.points.map(p => p._id) })),
+            harnesses: harnesses.map(h => ({ points: h.points.map(p => p._id) })),
+            aArms: aArms.map(a => ({...a, p1: a.p1._id, p2: a.p2._id, hub: a.hub._id})),
+            panels: panels.map(p => ({...p, points: p.points.map(pt => pt._id)})),
+            windows: windows.map(w => ({...w, points: w.points.map(pt => pt._id)})),
+            axles: axles.map(a => ({...a, center: a.center._id, mounts: a.mounts ? a.mounts.map(m => m._id) : null})),
+            driveshafts: driveshafts.map(ds => ({
+                fromType: ds.fromType,
+                toType: ds.toType,
+                from: (ds.fromType === 'hub' ? hubs.indexOf(ds.from) : (ds.fromType === 'gearbox' ? gearboxes.indexOf(ds.from) : differentials.indexOf(ds.from))),
+                to: (ds.toType === 'hub' ? hubs.indexOf(ds.to) : (ds.toType === 'gearbox' ? gearboxes.indexOf(ds.to) : differentials.indexOf(ds.to)))
+            }))
+        };
+        const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName + '.json';
+        a.click();
+    } else if(format === "obj"){
+        let objText = "# Car Chassis Builder Export\n";
+        nodes.forEach(n => { objText += `v ${n.x} ${n.y} ${n.z}\n`; });
+        tubes.forEach(t => {
+            let i1 = nodes.indexOf(t.from) + 1;
+            let i2 = nodes.indexOf(t.to) + 1;
+            objText += `l ${i1} ${i2}\n`;
+        });
+        const blob = new Blob([objText], {type: 'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName + '.obj';
+        a.click();
+    } else if(format === "dxf"){
+        let dxf = "0\nSECTION\n2\nENTITIES\n";
+        tubes.forEach(t => {
+            dxf += `0\nLINE\n8\nCHASSIS\n10\n${t.from.x}\n20\n${t.from.y}\n30\n${t.from.z}\n11\n${t.to.x}\n21\n${t.to.y}\n31\n${t.to.z}\n`;
+        });
+        dxf += "0\nENDSEC\n0\nEOF";
+        const blob = new Blob([dxf], {type: 'text/plain'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName + '.dxf';
+        a.click();
+    }
     
     nodes.forEach(n => delete n._id);
     mounts.forEach(m => delete m._id);
-
-    let blob = new Blob([JSON.stringify(data)], {type: "application/json"});
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = "chassis_project.json";
-    a.click();
 }
 
 function loadProject(event) {
-    let file = event.target.files[0];
+    const file = event.target.files[0];
     if(!file) return;
-    
-    let reader = new FileReader();
-    reader.onload = function(e) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
         try {
-            let data = JSON.parse(e.target.result);
+            const data = JSON.parse(e.target.result);
             
             nodes = data.nodes || [];
             mounts = data.mounts || [];
             
-            let pointMap = {};
-            nodes.forEach(n => pointMap[n._id] = n);
-            mounts.forEach(m => pointMap[m._id] = m);
+            let idMap = {};
+            nodes.forEach(n => idMap[n._id] = n);
+            mounts.forEach(m => idMap[m._id] = m);
             
-            tubes = (data.tubes || []).map(t => ({...t, a: pointMap[t.a], b: pointMap[t.b]}));
-            suspensions = (data.suspensions || []).map(s => ({...s, p1: pointMap[s.p1], p2: pointMap[s.p2]}));
-            hubs = (data.hubs || []).map(h => ({...h, mount: pointMap[h.mount], suspension: h.suspension !== null ? suspensions[h.suspension] : null}));
+            tubes = (data.tubes || []).map(t => ({...t, a: idMap[t.a], b: idMap[t.b]}));
+            suspensions = (data.suspensions || []).map(s => ({...s, p1: idMap[s.p1], p2: idMap[s.p2]}));
+            
+            hubs = (data.hubs || []).map(h => ({...h, mount: idMap[h.mount], suspension: h.suspension !== null && h.suspension !== undefined ? suspensions[h.suspension] : null}));
             rotors = (data.rotors || []).map(r => ({...r, hub: hubs[r.hub]}));
             pads = (data.pads || []).map(p => ({...p, rotor: rotors[p.rotor]}));
-            wheels = (data.wheels || []).map(w => ({...w, rotor: w.rotor !== null ? rotors[w.rotor] : null, mount: w.mount ? pointMap[w.mount] : null}));
-            engines = (data.engines || []).map(eng => ({...eng, mount: pointMap[eng.mount]}));
-            gearboxes = (data.gearboxes || []).map(g => ({...g, mount: pointMap[g.mount]}));
-            differentials = (data.differentials || []).map(d => ({...d, mount: pointMap[d.mount]}));
-            aArms = (data.aArms || []).map(a => ({...a, p1: pointMap[a.p1], p2: pointMap[a.p2], hub: pointMap[a.hub]}));
-            panels = (data.panels || []).map(p => ({...p, points: p.points.map(id => pointMap[id])}));
-            axles = (data.axles || []).map(a => ({...a, center: pointMap[a.center], mounts: a.mounts ? a.mounts.map(id => pointMap[id]) : null}));
+            wheels = (data.wheels || []).map(w => ({...w, rotor: w.rotor !== null && w.rotor !== undefined ? rotors[w.rotor] : null, mount: w.mount ? idMap[w.mount] : null}));
             
-            nodes.forEach(n => delete n._id);
-            mounts.forEach(m => delete m._id);
+            engines = (data.engines || []).map(eng => ({...eng, mount: idMap[eng.mount]}));
+            gearboxes = (data.gearboxes || []).map(g => ({...g, mount: idMap[g.mount]}));
+            differentials = (data.differentials || []).map(d => ({...d, mount: idMap[d.mount]}));
+            electricMotors = (data.electricMotors || []).map(em => ({...em, mount: idMap[em.mount]}));
+            modules = (data.modules || []).map(m => ({...m, mount: idMap[m.mount]}));
+            batteries = (data.batteries || []).map(b => ({...b, mount: idMap[b.mount]}));
+            hybridBatteries = (data.hybridBatteries || []).map(hb => ({...hb, mount: idMap[hb.mount]}));
+            radiators = (data.radiators || []).map(rad => ({...rad, mount: idMap[rad.mount]}));
+            expansionTanks = (data.expansionTanks || []).map(et => ({...et, mount: idMap[et.mount]}));
             
-            selectedComponent = null;
+            coolantHoses = (data.coolantHoses || []).map(h => ({ points: h.points.map(p => idMap[p]) }));
+            brakeReservoirs = (data.brakeReservoirs || []).map(br => ({...br, mount: idMap[br.mount]}));
+            brakeLines = (data.brakeLines || []).map(l => ({ points: l.points.map(p => idMap[p]) }));
+            
+            steeringRacks = (data.steeringRacks || []).map(sr => ({...sr, mount: idMap[sr.mount]}));
+            steeringWheels = (data.steeringWheels || []).map(sw => ({...sw, mount: idMap[sw.mount]}));
+            seats = (data.seats || []).map(s => ({...s, mount: idMap[s.mount]}));
+            handbrakes = (data.handbrakes || []).map(hb => ({...hb, mount: idMap[hb.mount]}));
+            shiftKnobs = (data.shiftKnobs || []).map(sk => ({...sk, mount: idMap[sk.mount]}));
+            speedometers = (data.speedometers || []).map(sm => ({...sm, mount: idMap[sm.mount]}));
+            hinges = (data.hinges || []).map(h => ({...h, mount: idMap[h.mount]}));
+            
+            steeringColumns = (data.steeringColumns || []).map(sc => {
+                let fromObj = sc.fromType === 'steeringRack' ? steeringRacks.find(r => r.mount === idMap[sc.from]) : steeringWheels.find(w => w.mount === idMap[sc.from]);
+                let toObj = sc.toType === 'steeringRack' ? steeringRacks.find(r => r.mount === idMap[sc.to]) : steeringWheels.find(w => w.mount === idMap[sc.to]);
+                return { from: fromObj, fromType: sc.fromType, to: toObj, toType: sc.toType };
+            });
+            
+            fuelTanks = (data.fuelTanks || []).map(ft => ({...ft, mount: idMap[ft.mount]}));
+            fuelLines = (data.fuelLines || []).map(l => ({ points: l.points.map(p => idMap[p]) }));
+            harnesses = (data.harnesses || []).map(h => ({ points: h.points.map(p => idMap[p]) }));
+            
+            aArms = (data.aArms || []).map(a => ({...a, p1: idMap[a.p1], p2: idMap[a.p2], hub: idMap[a.hub]}));
+            panels = (data.panels || []).map(p => ({...p, points: p.points.map(pt => idMap[pt])}));
+            windows = (data.windows || []).map(w => ({...w, points: w.points.map(pt => idMap[pt])}));
+            
+            axles = (data.axles || []).map(a => ({...a, center: idMap[a.center], mounts: a.mounts ? a.mounts.map(m => idMap[m]) : null}));
+            
+            driveshafts = (data.driveshafts || []).map(ds => {
+                let fromList = ds.fromType === 'hub' ? hubs : (ds.fromType === 'gearbox' ? gearboxes : differentials);
+                let toList = ds.toType === 'hub' ? hubs : (ds.toType === 'gearbox' ? gearboxes : differentials);
+                return {
+                    fromType: ds.fromType,
+                    toType: ds.toType,
+                    from: fromList[ds.from],
+                    to: toList[ds.to]
+                };
+            });
+            
+            links = [];
             selectedTube = null;
             selectedNode = null;
-            updateInspector();
+            selectedMount = null;
+            selectedComponent = null;
             
-            alert("Project loaded successfully!");
+            render();
+            event.target.value = '';
         } catch(err) {
             console.error(err);
-            alert("Failed to load project. Invalid file format.");
+            alert("Error loading project file.");
         }
-        event.target.value = ''; // Reset input
     };
     reader.readAsText(file);
-}
-
-function openSettings() {
-    alert("Settings panel coming soon! Customize grid size, UI colors, and snapping rules here.");
 }
 </script>
 
